@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+// FeaturesSection.tsx
+import React, { useEffect, useRef, useState } from "react";
+import { motion } from "framer-motion";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faPlay,
@@ -9,83 +10,157 @@ import {
   faExpand,
   faCompress,
   faBolt,
-  faCheckCircle,
-  faCogs,
   faEdit,
   faSave,
   faTimes,
   faTrash,
   faPlus,
 } from "@fortawesome/free-solid-svg-icons";
-import { useAuth } from "../../context/AuthContext"; // Asegúrate de importar el contexto de autenticación
+import { useAuth } from "../../context/AuthContext";
+import { ProjectData } from "../../data/project";
+
+/**
+ * Para la edición dentro de esta sección:
+ * - Lee todos los datos desde `project` (sin usar estados internos para title, video, etc.).
+ * - Cuando se edite en esta sección, actualiza directamente el estado global con `setProject`.
+ *   Así, los cambios se ven reflejados al instante y no se mezclan con viejos defaults locales.
+ */
 
 interface FeatureItem {
-  icon: any;
+  icon: string; // o el tipo que uses (React Icons, FontAwesome key, etc.)
   stat: string;
   title: string;
   description: string;
 }
 
 interface TechnicalIcon {
-  icon: any;
+  icon: string; // o el tipo que uses
   text: string;
 }
 
 interface FeaturesSectionProps {
+  // Datos globales de tu proyecto
+  project: ProjectData;
+  setProject: (data: ProjectData) => void;
   isAdmin?: boolean;
-  onSave?: (newData: {
-    title: string;
-    subtitle: string;
-    videoUrl: string;
-    features: FeatureItem[];
-    technicalIcons: TechnicalIcon[];
-  }) => void;
 }
 
-const FeaturesSection = ({ onSave }: FeaturesSectionProps) => {
-  const { user } = useAuth(); // Obtén el usuario del contexto de autenticación
-  const isAdmin = user?.role === "admin"; // Verifica si el usuario es administrador
-  
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(false);
+const FeaturesSection: React.FC<FeaturesSectionProps> = ({ project, setProject, isAdmin }) => {
+  const { user } = useAuth();
+  // Determina si un usuario logueado es admin (puede ser redundante si ya pasas isAdmin)
+  const canEdit = isAdmin || user?.role === "admin";
+
+  // Control de modo edición local
   const [isEditing, setIsEditing] = useState(false);
 
-  // Estado para los datos editables
-  const [title, setTitle] = useState("Ingeniería de Alto Rendimiento");
-  const [subtitle, setSubtitle] = useState(
-    "Diseño innovador que supera los sistemas convencionales."
-  );
-  const [videoUrl, setVideoUrl] = useState("/public/media/video3.mp4");
-  const [features, setFeatures] = useState<FeatureItem[]>([
-    {
-      icon: faBolt,
-      stat: "85%",
-      title: "Eficiencia Maximizada",
-      description:
-        "Flujo de trabajo optimizado con automatización inteligente.",
-    },
-    {
-      icon: faCheckCircle,
-      stat: "60%",
-      title: "Operación Continua",
-      description: "Sistema autónomo con mantenimiento predictivo.",
-    },
-    {
-      icon: faCogs,
-      stat: "5x",
-      title: "Adaptabilidad Total",
-      description: "Configuraciones múltiples para diferentes materiales.",
-    },
-  ]);
-  const [technicalIcons, setTechnicalIcons] = useState<TechnicalIcon[]>([
-    { icon: faBolt, text: "Alto Rendimiento" },
-    { icon: faCheckCircle, text: "Operación Autónoma" },
-    { icon: faCogs, text: "Adaptabilidad" },
-  ]);
+  // Extrae los datos del proyecto para mayor comodidad
+  const {
+    featuresTitle = "Ingeniería de Alto Rendimiento",
+    featuresSubtitle = "Diseño innovador que supera los sistemas convencionales.",
+    featuresVideoUrl = "/public/media/video3.mp4",
+    features = [],
+    technicalIcons = [],
+  } = project;
 
-  // Funciones de control de video
+  // Video y fullscreen
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [isPlaying, setIsPlaying] = useState(true);
+  const [isMuted, setIsMuted] = useState(true);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    // Listener para saber si salimos de fullscreen
+    const handleFullscreenChange = () => {
+      setIsFullscreen(document.fullscreenElement !== null);
+    };
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+    };
+  }, []);
+
+  /* =================
+   * FUNCIONES DE EDICIÓN
+   * ================= */
+
+  // Guarda cambios (desactiva edición)
+  const handleSave = () => {
+    setIsEditing(false);
+  };
+
+  // Cambiar el video subiendo un archivo
+  const handleVideoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      const url = URL.createObjectURL(file);
+      setProject({
+        ...project,
+        featuresVideoUrl: url,
+      });
+    }
+  };
+
+  // Seccion Features: agregar o eliminar
+  const addFeature = () => {
+    const updatedFeatures = [
+      ...features,
+      {
+        icon: faBolt.toString(), // Por defecto, un icono
+        stat: "Nuevo %",
+        title: "Nuevo Título",
+        description: "Nueva descripción",
+      },
+    ];
+    setProject({ ...project, features: updatedFeatures });
+  };
+
+  const removeFeature = (index: number) => {
+    const updated = [...features];
+    updated.splice(index, 1);
+    setProject({ ...project, features: updated });
+  };
+
+  // Seccion TechnicalIcons: agregar o eliminar
+  const addTechnicalIcon = () => {
+    const updated = [
+      ...technicalIcons,
+      { icon: faBolt.toString(), text: "Nueva Característica" },
+    ];
+    setProject({ ...project, technicalIcons: updated });
+  };
+
+  const removeTechnicalIcon = (index: number) => {
+    const updated = [...technicalIcons];
+    updated.splice(index, 1);
+    setProject({ ...project, technicalIcons: updated });
+  };
+
+  // Actualizar los campos del Feature i-ésimo
+  const handleUpdateFeature = (i: number, field: keyof FeatureItem, value: string) => {
+    const updated = [...features];
+    // El icono se guarda como string (por ejemplo, nombre del icono)
+    (updated[i] as any)[field] = value;
+    setProject({ ...project, features: updated });
+  };
+
+  // Actualizar los campos del TechnicalIcon i-ésimo
+  const handleUpdateTechnicalIcon = (i: number, value: string) => {
+    const updated = [...technicalIcons];
+    updated[i].text = value;
+    setProject({ ...project, technicalIcons: updated });
+  };
+
+  // Actualizar el título y subtítulo de la sección
+  const handleChangeTitle = (newVal: string) => {
+    setProject({ ...project, featuresTitle: newVal });
+  };
+  const handleChangeSubtitle = (newVal: string) => {
+    setProject({ ...project, featuresSubtitle: newVal });
+  };
+
+  /* =================
+   * CONTROLES DE VIDEO
+   * ================= */
   const togglePlayPause = () => {
     if (videoRef.current) {
       if (videoRef.current.paused) {
@@ -117,73 +192,13 @@ const FeaturesSection = ({ onSave }: FeaturesSectionProps) => {
     }
   };
 
-  // Funciones de edición
-  const handleSave = () => {
-    if (onSave) {
-      onSave({
-        title,
-        subtitle,
-        videoUrl,
-        features,
-        technicalIcons,
-      });
-    }
-    setIsEditing(false);
-  };
-
-  const handleVideoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      const url = URL.createObjectURL(file);
-      setVideoUrl(url);
-    }
-  };
-
-  // Funciones para agregar/eliminar stats
-  const addFeature = () => {
-    setFeatures([
-      ...features,
-      {
-        icon: faBolt,
-        stat: "Nuevo %",
-        title: "Nuevo Título",
-        description: "Nueva descripción",
-      },
-    ]);
-  };
-
-  const removeFeature = (index: number) => {
-    const newFeatures = features.filter((_, i) => i !== index);
-    setFeatures(newFeatures);
-  };
-
-  // Funciones para agregar/eliminar iconos técnicos
-  const addTechnicalIcon = () => {
-    setTechnicalIcons([
-      ...technicalIcons,
-      { icon: faBolt, text: "Nueva Característica" },
-    ]);
-  };
-
-  const removeTechnicalIcon = (index: number) => {
-    const newIcons = technicalIcons.filter((_, i) => i !== index);
-    setTechnicalIcons(newIcons);
-  };
-
-  useEffect(() => {
-    const handleFullscreenChange = () => {
-      setIsFullscreen(document.fullscreenElement !== null);
-    };
-
-    document.addEventListener("fullscreenchange", handleFullscreenChange);
-    return () =>
-      document.removeEventListener("fullscreenchange", handleFullscreenChange);
-  }, []);
-
+  /* =================
+   * RENDER
+   * ================= */
   return (
     <section className="py-20 bg-white" id="beneficios">
       <div className="container mx-auto px-4">
-        {isAdmin && ( // Solo muestra los botones de edición si el usuario es admin
+        {canEdit && (
           <div className="flex justify-end mb-6">
             {isEditing ? (
               <div className="flex gap-2">
@@ -222,32 +237,32 @@ const FeaturesSection = ({ onSave }: FeaturesSectionProps) => {
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8 }}
             >
-              {isEditing && isAdmin ? ( // Solo permite editar si el usuario es admin
+              {isEditing && canEdit ? (
                 <div className="space-y-4">
                   <input
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
+                    value={featuresTitle}
+                    onChange={(e) => handleChangeTitle(e.target.value)}
                     className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6802C1] text-4xl md:text-6xl font-bold"
                   />
                   <input
-                    value={subtitle}
-                    onChange={(e) => setSubtitle(e.target.value)}
+                    value={featuresSubtitle}
+                    onChange={(e) => handleChangeSubtitle(e.target.value)}
                     className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6802C1] text-lg md:text-3xl"
                   />
                 </div>
               ) : (
                 <>
                   <h3 className="text-4xl md:text-6xl font-bold text-gray-900 mb-4">
-                    {title}
+                    {featuresTitle}
                   </h3>
                   <p className="text-gray-600 text-lg md:text-3xl">
-                    {subtitle}
+                    {featuresSubtitle}
                   </p>
                 </>
               )}
             </motion.div>
 
-            {/* Items Interactivos */}
+            {/* Items Interactivos (FEATURES) */}
             <div className="space-y-6">
               {features.map((item, index) => (
                 <motion.div
@@ -257,16 +272,13 @@ const FeaturesSection = ({ onSave }: FeaturesSectionProps) => {
                   whileInView={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.8, delay: index * 0.2 }}
                 >
-                  {isEditing && isAdmin ? ( // Solo permite editar si el usuario es admin
+                  {isEditing && canEdit ? (
                     <div className="w-full space-y-4">
+                      {/* STAT */}
                       <div className="flex justify-between items-center">
                         <input
                           value={item.stat}
-                          onChange={(e) => {
-                            const newFeatures = [...features];
-                            newFeatures[index].stat = e.target.value;
-                            setFeatures(newFeatures);
-                          }}
+                          onChange={(e) => handleUpdateFeature(index, "stat", e.target.value)}
                           className="w-full p-2 border border-gray-200 rounded-lg"
                         />
                         <button
@@ -276,22 +288,18 @@ const FeaturesSection = ({ onSave }: FeaturesSectionProps) => {
                           <FontAwesomeIcon icon={faTrash} />
                         </button>
                       </div>
+
+                      {/* TITLE */}
                       <input
                         value={item.title}
-                        onChange={(e) => {
-                          const newFeatures = [...features];
-                          newFeatures[index].title = e.target.value;
-                          setFeatures(newFeatures);
-                        }}
+                        onChange={(e) => handleUpdateFeature(index, "title", e.target.value)}
                         className="w-full p-2 border border-gray-200 rounded-lg"
                       />
+
+                      {/* DESCRIPTION */}
                       <textarea
                         value={item.description}
-                        onChange={(e) => {
-                          const newFeatures = [...features];
-                          newFeatures[index].description = e.target.value;
-                          setFeatures(newFeatures);
-                        }}
+                        onChange={(e) => handleUpdateFeature(index, "description", e.target.value)}
                         className="w-full p-2 border border-gray-200 rounded-lg"
                         rows={3}
                       />
@@ -315,104 +323,102 @@ const FeaturesSection = ({ onSave }: FeaturesSectionProps) => {
                   )}
                 </motion.div>
               ))}
-              {isEditing &&
-                isAdmin && ( // Botón para agregar nueva estadística
-                  <button
-                    onClick={addFeature}
-                    className="w-full p-4 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors flex items-center justify-center"
-                  >
-                    <FontAwesomeIcon icon={faPlus} className="mr-2" />
-                    Agregar Estadística
-                  </button>
-                )}
+
+              {/* Botón para agregar nueva Feature */}
+              {isEditing && canEdit && (
+                <button
+                  onClick={addFeature}
+                  className="w-full p-4 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors flex items-center justify-center"
+                >
+                  <FontAwesomeIcon icon={faPlus} className="mr-2" />
+                  Agregar Estadística
+                </button>
+              )}
             </div>
           </div>
 
-          {/* Contenedor de Video */}
+          {/* Contenedor de Video + Íconos Técnicos */}
           <motion.div
-  className="relative w-full max-w-4xl mx-auto"
-  initial={{ opacity: 0, y: 50 }}
-  whileInView={{ opacity: 1, y: 0 }}
-  transition={{ duration: 0.8, delay: 0.4 }}
->
-  {/* Input para cambiar el video (solo en modo edición) */}
-  {isEditing && isAdmin && (
-    <div className="mb-4">
-      <label className="block text-sm font-medium text-gray-700 mb-2">
-        Cambiar Video
-      </label>
-      <input
-        type="file"
-        accept="video/*"
-        onChange={handleVideoChange}
-        className="w-full p-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6802C1]"
-      />
-    </div>
-  )}
-
-  <div className="relative h-[400px] w-full rounded-2xl overflow-hidden shadow-lg group transform hover:scale-[0.98] transition-transform duration-500">
-    <video
-      ref={videoRef}
-      className="w-full h-full object-cover"
-      autoPlay
-      muted
-      loop
-      playsInline
-      poster="/assets/images/poster.jpg"
-    >
-      <source src={videoUrl} type="video/mp4" />
-      Tu navegador no soporta videos HTML5.
-    </video>
-
-    {/* Overlay y Controles Personalizados */}
-    <div className="absolute inset-0 bg-gradient-to-t from-gray-900/20 via-transparent to-transparent flex items-end p-6">
-      <div className="w-full flex justify-between items-center">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={togglePlayPause}
-            className="bg-white/10 backdrop-blur-sm rounded-full p-3 hover:bg-white/20 transition-colors"
+            className="relative w-full max-w-4xl mx-auto"
+            initial={{ opacity: 0, y: 50 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.4 }}
           >
-            <FontAwesomeIcon
-              icon={isPlaying ? faPause : faPlay}
-              className="w-6 h-6 text-white"
-            />
-          </button>
-          <button
-            onClick={toggleMute}
-            className="bg-white/10 backdrop-blur-sm rounded-full p-3 hover:bg-white/20 transition-colors"
-          >
-            <FontAwesomeIcon
-              icon={isMuted ? faVolumeMute : faVolumeUp}
-              className="w-6 h-6 text-white"
-            />
-          </button>
-        </div>
-        <button
-          onClick={toggleFullscreen}
-          className="bg-white/10 backdrop-blur-sm rounded-full p-3 hover:bg-white/20 transition-colors"
-        >
-          <FontAwesomeIcon
-            icon={isFullscreen ? faCompress : faExpand}
-            className="w-6 h-6 text-white"
-          />
-        </button>
-      </div>
-    </div>
-  </div>
+            {/* Input para cambiar el video (solo en modo edición) */}
+            {isEditing && canEdit && (
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Cambiar Video
+                </label>
+                <input
+                  type="file"
+                  accept="video/*"
+                  onChange={handleVideoChange}
+                  className="w-full p-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6802C1]"
+                />
+              </div>
+            )}
+
+            <div className="relative h-[400px] w-full rounded-2xl overflow-hidden shadow-lg group transform hover:scale-[0.98] transition-transform duration-500">
+              <video
+                ref={videoRef}
+                className="w-full h-full object-cover"
+                autoPlay
+                muted
+                loop
+                playsInline
+                poster="/assets/images/poster.jpg"
+              >
+                <source src={featuresVideoUrl} type="video/mp4" />
+                Tu navegador no soporta videos HTML5.
+              </video>
+
+              {/* Overlay y Controles Personalizados */}
+              <div className="absolute inset-0 bg-gradient-to-t from-gray-900/20 via-transparent to-transparent flex items-end p-6">
+                <div className="w-full flex justify-between items-center">
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={togglePlayPause}
+                      className="bg-white/10 backdrop-blur-sm rounded-full p-3 hover:bg-white/20 transition-colors"
+                    >
+                      <FontAwesomeIcon
+                        icon={isPlaying ? faPause : faPlay}
+                        className="w-6 h-6 text-white"
+                      />
+                    </button>
+                    <button
+                      onClick={toggleMute}
+                      className="bg-white/10 backdrop-blur-sm rounded-full p-3 hover:bg-white/20 transition-colors"
+                    >
+                      <FontAwesomeIcon
+                        icon={isMuted ? faVolumeMute : faVolumeUp}
+                        className="w-6 h-6 text-white"
+                      />
+                    </button>
+                  </div>
+                  <button
+                    onClick={toggleFullscreen}
+                    className="bg-white/10 backdrop-blur-sm rounded-full p-3 hover:bg-white/20 transition-colors"
+                  >
+                    <FontAwesomeIcon
+                      icon={isFullscreen ? faCompress : faExpand}
+                      className="w-6 h-6 text-white"
+                    />
+                  </button>
+                </div>
+              </div>
+            </div>
+
             {/* Iconos de Características Técnicas */}
             <div className="flex justify-center gap-8 mt-6">
               {technicalIcons.map((item, index) => (
                 <div key={index} className="text-center">
-                  {isEditing && isAdmin ? ( // Solo permite editar si el usuario es admin
+                  {isEditing && canEdit ? (
                     <div className="space-y-2">
                       <div className="flex justify-between items-center">
                         <input
                           value={item.text}
-                          onChange={(e) => {
-                            const newIcons = [...technicalIcons];
-                            newIcons[index].text = e.target.value;
-                            setTechnicalIcons(newIcons);
-                          }}
+                          onChange={(e) => handleUpdateTechnicalIcon(index, e.target.value)}
                           className="w-full p-2 border border-gray-200 rounded-lg"
                         />
                         <button
@@ -426,8 +432,10 @@ const FeaturesSection = ({ onSave }: FeaturesSectionProps) => {
                   ) : (
                     <>
                       <div className="bg-gray-50 p-3 rounded-xl inline-block hover:bg-gray-100 transition-colors">
+                        {/* Convertimos el string del icono a algo presentable, si tienes un parser. 
+                            Si sigues usando FA icons directos, podrías mapearlos. */}
                         <FontAwesomeIcon
-                          icon={item.icon}
+                          icon={item.icon as any}
                           className="w-11 h-11 text-[var(--color-primario)]"
                         />
                       </div>
@@ -436,15 +444,14 @@ const FeaturesSection = ({ onSave }: FeaturesSectionProps) => {
                   )}
                 </div>
               ))}
-              {isEditing &&
-                isAdmin && ( // Botón para agregar nuevo ícono técnico
-                  <button
-                    onClick={addTechnicalIcon}
-                    className="p-4 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors flex items-center justify-center"
-                  >
-                    <FontAwesomeIcon icon={faPlus} />
-                  </button>
-                )}
+              {isEditing && canEdit && (
+                <button
+                  onClick={addTechnicalIcon}
+                  className="p-4 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors flex items-center justify-center"
+                >
+                  <FontAwesomeIcon icon={faPlus} />
+                </button>
+              )}
             </div>
           </motion.div>
         </div>
