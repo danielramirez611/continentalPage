@@ -1,4 +1,3 @@
-import { useState } from "react";
 import {
   FiSmile,
   FiStar,
@@ -9,10 +8,11 @@ import {
   FiCloud,
   FiSun,
 } from "react-icons/fi";
+import { ReactElement } from "react";
 
 interface IconSelectorProps {
-  selected?: React.ReactNode;
-  onSelect: (icon: React.ReactNode) => void;
+  selected?: ReactElement;
+  onSelect: (icon: ReactElement) => void;
 }
 
 export const IconSelector = ({ selected, onSelect }: IconSelectorProps) => {
@@ -28,21 +28,26 @@ export const IconSelector = ({ selected, onSelect }: IconSelectorProps) => {
   ];
 
   return (
-    <div className="border rounded-lg p-2">
-      <div className="grid grid-cols-4 gap-2">
-        {iconList.map((icon, i) => (
-          <button
-            key={i}
-            onClick={() => onSelect(icon.component)}
-            className={`p-2 rounded flex items-center justify-center ${
-              selected === icon.component
-                ? "bg-blue-100 text-blue-600"
-                : "hover:bg-gray-100 text-gray-600"
-            }`}
-          >
-            {icon.component}
-          </button>
-        ))}
+    <div className="border border-gray-200 rounded-lg p-4 shadow-sm bg-white">
+      <div className="grid grid-cols-4 gap-3">
+        {iconList.map((icon) => {
+          const isSelected =
+            selected?.type === icon.component.type; // Comparación por tipo de componente
+
+          return (
+            <button
+              key={icon.name}
+              onClick={() => onSelect(icon.component)}
+              className={`p-3 rounded-lg flex items-center justify-center transition-all ${
+                isSelected
+                  ? "bg-primario text-white border-2 border-blue-300 shadow-md"
+                  : "bg-gray-50 text-gray-600 hover:bg-gray-200 focus:outline-3 focus:outline-offset-2 focus:outline-primario active:bg-primario active:text-white hover:shadow-md"
+              }`}
+            >
+              {icon.component}
+            </button>
+          );
+        })}
       </div>
     </div>
   );

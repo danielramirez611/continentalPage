@@ -22,6 +22,8 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ project, setProject, onFinish
     {
       name: "Características",
       component: <FeaturesForm project={project} setProject={setProject} />,
+      validation: (p: ProjectData) => 
+        !!p.featuresTitle && p.features.length > 0
     },
     {
       name: "Flujo de trabajo",
@@ -40,8 +42,11 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ project, setProject, onFinish
   const progress = ((currentSection + 1) / sections.length) * 100;
 
   const goNext = () => {
-    if (currentSection < sections.length - 1) {
-      setCurrentSection((prev) => prev + 1);
+    const currentValidation = sections[currentSection]?.validation;
+    if (!currentValidation || currentValidation(project)) {
+      if (currentSection < sections.length - 1) {
+        setCurrentSection((prev) => prev + 1);
+      }
     }
   };
 
@@ -64,7 +69,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ project, setProject, onFinish
       <div className="mb-6">
         <div className="h-2 bg-gray-200 rounded-full">
           <div
-            className="h-2 bg-blue-600 rounded-full transition-all"
+            className="h-2 bg-primario rounded-full transition-all"
             style={{ width: `${progress}%` }}
           />
         </div>
@@ -101,7 +106,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ project, setProject, onFinish
         ) : (
           <button
             onClick={goNext}
-            className="flex items-center px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition"
+            className="flex items-center px-4 py-2 bg-primario text-white rounded-lg hover:bg-purple-600 transition"
           >
             Siguiente
             <FiChevronRight className="ml-2" />

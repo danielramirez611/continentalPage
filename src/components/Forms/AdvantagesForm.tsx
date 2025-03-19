@@ -1,7 +1,9 @@
 // components/AdvantagesForm.tsx
 import React, { useState } from "react";
 import { IconSelector } from "../common/IconSelector";
-import { ProjectData } from "../../data/project";
+import { ProjectData, Advantage } from "../../data/project";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faChevronDown, faChevronUp } from "@fortawesome/free-solid-svg-icons";
 
 interface AdvantagesFormProps {
   project: ProjectData;
@@ -10,9 +12,9 @@ interface AdvantagesFormProps {
 
 const AdvantagesForm = ({ project, setProject }: AdvantagesFormProps) => {
   const [newAdvantage, setNewAdvantage] = useState<Partial<Advantage>>({});
+  const [isAdvantagesExpanded, setIsAdvantagesExpanded] = useState(true);
 
   const handleAddAdvantage = () => {
-    // Verifica que todos los campos necesarios estén llenos antes de agregar
     if (
       newAdvantage.title &&
       newAdvantage.description &&
@@ -30,6 +32,7 @@ const AdvantagesForm = ({ project, setProject }: AdvantagesFormProps) => {
 
   return (
     <div className="space-y-6">
+      {/* Título y subtítulo de la sección */}
       <div className="border-gray-300 border-b pb-3">
         <h2 className="text-2xl font-bold">Configurar Ventajas</h2>
         <p className="text-gray-600 text-sm">
@@ -58,103 +61,119 @@ const AdvantagesForm = ({ project, setProject }: AdvantagesFormProps) => {
         />
       </div>
 
-      {/* Lista de ventajas */}
-      <div className="space-y-4">
-        <h3 className="font-semibold text-lg">Ventajas Existentes</h3>
-        <p className="text-gray-500 text-sm">
-          Edita la información de cada ventaja según sea necesario.
-        </p>
-
-        {project.advantages.map((advantage, index) => (
-          <div
-            key={index}
-            className="border-gray-300 border p-4 rounded-lg bg-white shadow-sm transition hover:shadow-md"
-          >
-            <div className="mb-2">
-              <label className="block text-sm font-medium mb-1">Título</label>
-              <input
-                value={advantage.title}
-                onChange={(e) => {
-                  const newAdvantages = [...project.advantages];
-                  newAdvantages[index].title = e.target.value;
-                  setProject({ ...project, advantages: newAdvantages });
-                }}
-                className="w-full p-2 border-gray-300 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Ej. Rapidez"
-              />
-            </div>
-            <div className="mb-2">
-              <label className="block text-sm font-medium mb-1">Descripción</label>
-              <textarea
-                value={advantage.description}
-                onChange={(e) => {
-                  const newAdvantages = [...project.advantages];
-                  newAdvantages[index].description = e.target.value;
-                  setProject({ ...project, advantages: newAdvantages });
-                }}
-                className="w-full p-2 border-gray-300 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Ej. Ofrecemos el servicio más rápido del mercado"
-              />
-            </div>
-            <div className="mb-2">
-              <label className="block text-sm font-medium mb-1">Icono</label>
-              <IconSelector
-                selected={advantage.icon}
-                onSelect={(icon) => {
-                  const newAdvantages = [...project.advantages];
-                  newAdvantages[index].icon = icon;
-                  setProject({ ...project, advantages: newAdvantages });
-                }}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Estadística</label>
-              <input
-                value={advantage.stat}
-                onChange={(e) => {
-                  const newAdvantages = [...project.advantages];
-                  newAdvantages[index].stat = e.target.value;
-                  setProject({ ...project, advantages: newAdvantages });
-                }}
-                className="w-full p-2 border-gray-300 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Ej. 100+ clientes satisfechos"
-              />
-            </div>
+      {/* Lista de ventajas (Colapsable) */}
+      <div className="border border-gray-200 rounded-lg p-4">
+        <button
+          onClick={() => setIsAdvantagesExpanded(!isAdvantagesExpanded)}
+          className="w-full flex justify-between items-center text-lg font-semibold"
+        >
+          <span>Ventajas Existentes</span>
+          <FontAwesomeIcon icon={isAdvantagesExpanded ? faChevronUp : faChevronDown} />
+        </button>
+        {isAdvantagesExpanded && (
+          <div className="mt-4 space-y-4">
+            {project.advantages.map((advantage, index) => (
+              <div
+                key={index}
+                className="border-gray-300 border p-4 rounded-lg bg-white shadow-sm transition hover:shadow-md"
+              >
+                <div className="mb-2">
+                  <label className="block text-sm font-medium mb-1">Título</label>
+                  <input
+                    value={advantage.title}
+                    onChange={(e) => {
+                      const newAdvantages = [...project.advantages];
+                      newAdvantages[index].title = e.target.value;
+                      setProject({ ...project, advantages: newAdvantages });
+                    }}
+                    className="w-full p-2 border-gray-300 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Ej. Rapidez"
+                  />
+                </div>
+                <div className="mb-2">
+                  <label className="block text-sm font-medium mb-1">Descripción</label>
+                  <textarea
+                    value={advantage.description}
+                    onChange={(e) => {
+                      const newAdvantages = [...project.advantages];
+                      newAdvantages[index].description = e.target.value;
+                      setProject({ ...project, advantages: newAdvantages });
+                    }}
+                    className="w-full p-2 border-gray-300 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Ej. Ofrecemos el servicio más rápido del mercado"
+                  />
+                </div>
+                <div className="mb-2">
+                  <label className="block text-sm font-medium mb-1">Ícono</label>
+                  <IconSelector
+                    selected={advantage.icon}
+                    onSelect={(icon) => {
+                      const newAdvantages = [...project.advantages];
+                      newAdvantages[index].icon = icon;
+                      setProject({ ...project, advantages: newAdvantages });
+                    }}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Estadística</label>
+                  <input
+                    value={advantage.stat}
+                    onChange={(e) => {
+                      const newAdvantages = [...project.advantages];
+                      newAdvantages[index].stat = e.target.value;
+                      setProject({ ...project, advantages: newAdvantages });
+                    }}
+                    className="w-full p-2 border-gray-300 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Ej. 100+ clientes satisfechos"
+                  />
+                </div>
+              </div>
+            ))}
           </div>
-        ))}
+        )}
+      </div>
 
-        {/* Formulario para nueva ventaja */}
-        <div className="border-gray-300 border p-4 rounded-lg bg-white shadow-inner mt-6">
-          <h4 className="font-medium mb-4 text-lg">Agregar Nueva Ventaja</h4>
-          <label className="block text-sm font-medium mb-1">Título</label>
-          <input
-            value={newAdvantage.title || ""}
-            onChange={(e) => setNewAdvantage({ ...newAdvantage, title: e.target.value })}
-            className="w-full p-2 mb-2 border-gray-300 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Ej. Alta seguridad"
-          />
-          <label className="block text-sm font-medium mb-1">Descripción</label>
-          <textarea
-            value={newAdvantage.description || ""}
-            onChange={(e) => setNewAdvantage({ ...newAdvantage, description: e.target.value })}
-            className="w-full p-2 mb-2 border-gray-300 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Ej. Protegemos tus datos con encriptación de nivel bancario"
-          />
-          <label className="block text-sm font-medium mb-1">Icono</label>
-          <IconSelector
-            selected={newAdvantage.icon}
-            onSelect={(icon) => setNewAdvantage({ ...newAdvantage, icon })}
-          />
-          <label className="block text-sm font-medium mb-1 mt-2">Estadística</label>
-          <input
-            value={newAdvantage.stat || ""}
-            onChange={(e) => setNewAdvantage({ ...newAdvantage, stat: e.target.value })}
-            className="w-full p-2 border-gray-300 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Ej. 99.9% de efectividad"
-          />
+      {/* Formulario para nueva ventaja */}
+      <div className="border border-gray-200 rounded-lg p-4">
+        <h4 className="font-medium mb-4 text-lg">Agregar Nueva Ventaja</h4>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">Título</label>
+            <input
+              value={newAdvantage.title || ""}
+              onChange={(e) => setNewAdvantage({ ...newAdvantage, title: e.target.value })}
+              className="w-full p-2 border-gray-300 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Ej. Alta seguridad"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Descripción</label>
+            <textarea
+              value={newAdvantage.description || ""}
+              onChange={(e) => setNewAdvantage({ ...newAdvantage, description: e.target.value })}
+              className="w-full p-2 border-gray-300 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Ej. Protegemos tus datos con encriptación de nivel bancario"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Ícono</label>
+            <IconSelector
+              selected={newAdvantage.icon}
+              onSelect={(icon) => setNewAdvantage({ ...newAdvantage, icon })}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Estadística</label>
+            <input
+              value={newAdvantage.stat || ""}
+              onChange={(e) => setNewAdvantage({ ...newAdvantage, stat: e.target.value })}
+              className="w-full p-2 border-gray-300 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Ej. 99.9% de efectividad"
+            />
+          </div>
           <button
             onClick={handleAddAdvantage}
-            className="mt-4 w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600 transition"
+            className="w-full bg-primario text-white py-2 rounded hover:bg-purple-600 transition"
           >
             Agregar Ventaja
           </button>
@@ -165,4 +184,3 @@ const AdvantagesForm = ({ project, setProject }: AdvantagesFormProps) => {
 };
 
 export default AdvantagesForm;
-
