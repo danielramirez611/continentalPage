@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import { FiChevronLeft, FiChevronRight, FiCheck } from "react-icons/fi";
 import AdvantagesForm from "./AdvantagesForm";
 import FeaturesForm from "./FeaturesForm";
+import WorkflowForm from "./WorkFlowForm"; 
 import { ProjectData } from "../../data/project";
 
 interface ProjectFormProps {
@@ -27,7 +28,9 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ project, setProject, onFinish
     },
     {
       name: "Flujo de trabajo",
-      component: <div className="text-gray-500">Flujo de trabajo (próximamente)</div>,
+      component: <WorkflowForm project={project} setProject={setProject} />, // Usar WorkflowForm
+      validation: (p: ProjectData) => 
+        !!p.workflowTitle && p.workflow.length > 0
     },
     {
       name: "Equipo",

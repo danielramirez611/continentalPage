@@ -100,6 +100,8 @@ export interface ProjectData {
   showWorkflow: boolean; // Mostrar/ocultar la sección
   workflowTitle: string; // Título de la sección (ej: "Nuestro Proceso Creativo")
   workflowSubtitle: string; // Subtítulo de la sección (ej: "De la idea a la realidad")
+  workflowTextLeft?: string;    // Nueva prop opcional
+  workflowTextRight?: string;
 
   // Equipo
   team: TeamMember[];
