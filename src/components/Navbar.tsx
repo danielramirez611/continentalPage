@@ -1,13 +1,19 @@
 import { useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBars, faTimes } from "@fortawesome/free-solid-svg-icons";
+import { ProjectData } from "../data/project";
 
-const Navbar = () => {
+interface NavbarProps {
+  project: ProjectData; // Recibe el estado del proyecto
+}
+
+const Navbar = ({ project }: NavbarProps) => {
   const [scrolled, setScrolled] = useState(false);
   const [activeLink, setActiveLink] = useState("hero");
   const [menuOpen, setMenuOpen] = useState(false);
 
-  const handleScrollTo = (target) => {
+  // Función para desplazarse a una sección
+  const handleScrollTo = (target: string) => {
     const element = document.getElementById(target);
     if (element) {
       window.scrollTo({
@@ -19,6 +25,7 @@ const Navbar = () => {
     }
   };
 
+  // Efecto para detectar la sección activa al hacer scroll
   useEffect(() => {
     const handleScroll = () => {
       setScrolled(window.scrollY > 600);
@@ -50,14 +57,15 @@ const Navbar = () => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  // Enlaces del Navbar (filtrados según las secciones activas)
   const navLinks = [
     { name: "Inicio", target: "hero" },
-    { name: "Ventajas", target: "ventajas" },
-    { name: "Beneficios", target: "beneficios" },
-    { name: "Proceso", target: "workflowSection" },
-    { name: "Equipo", target: "equipo" },
-    { name: "Contacto", target: "contacto" },
-  ];
+    project.showAdvantages && { name: "Ventajas", target: "ventajas" },
+    project.showFeatures && { name: "Beneficios", target: "beneficios" },
+    project.showWorkflow && { name: "Proceso", target: "workflowSection" },
+    project.showTeam && { name: "Equipo", target: "equipo" },
+    project.showContact && { name: "Contacto", target: "contacto" },
+  ].filter(Boolean); // Filtra los enlaces que no están activos
 
   return (
     <header

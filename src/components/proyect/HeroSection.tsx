@@ -53,15 +53,7 @@ const HeroSection = () => {
       {/* Overlay para mejorar la legibilidad */}
       <div className="absolute top-0 left-0 w-full h-full bg-black/30 z-1"></div>
 
-      {/* Botón flotante para editar la imagen de fondo (solo para admin) */}
-      {user?.role === "admin" && (
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="fixed bottom-8 right-8 p-3 bg-white/20 backdrop-blur-sm rounded-full hover:bg-white/30 transition z-50 shadow-lg"
-        >
-          <FiImage className="text-white text-2xl" />
-        </button>
-      )}
+    
 
       {/* Contenido del Hero */}
       <motion.div

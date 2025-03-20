@@ -1,7 +1,13 @@
+// HeroGrid.tsx
 import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
 import { ReactNode, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faEdit, faSave, faTimes, faUpload } from "@fortawesome/free-solid-svg-icons";
+import {
+  faEdit,
+  faSave,
+  faTimes,
+  faUpload,
+} from "@fortawesome/free-solid-svg-icons";
 
 interface HeroSectionProps {
   title: string;
@@ -31,7 +37,7 @@ export const HeroGrid = ({
       setIsUploading(true);
       const file = e.target.files[0];
       // Simular carga de imagen
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
       const url = URL.createObjectURL(file);
       setImagePreview(url);
       setIsUploading(false);
@@ -43,29 +49,70 @@ export const HeroGrid = ({
       onSave?.({
         title: updatedTitle,
         description: updatedDescription,
-        image: imagePreview || backgroundImage
+        image: imagePreview || backgroundImage,
       });
       setIsEditing(false);
     } else {
-      // Animación de error
-      document.querySelectorAll('.hero-edit-input').forEach(input => {
-        if (!input.value) {
-          input.parentElement?.classList.add('animate-shake');
-          setTimeout(() => input.parentElement?.classList.remove('animate-shake'), 500);
+      // Animación de error en caso de campos vacíos
+      document.querySelectorAll(".hero-edit-input").forEach((input) => {
+        if (!(input as HTMLInputElement).value) {
+          input.parentElement?.classList.add("animate-shake");
+          setTimeout(
+            () => input.parentElement?.classList.remove("animate-shake"),
+            500
+          );
         }
       });
     }
   };
 
+  /* 
+   * Variants para un contenedor principal, 
+   * para lograr una animación de stagger (retardo secuencial) 
+   * en los elementos hijos.
+   */
+  const containerVariants = {
+    hidden: { opacity: 1 }, // puede estar visible pero con hijos ocultos
+    show: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.25, // retardo al mostrar cada hijo
+      },
+    },
+  };
+
+  // Variants para el fondo: fade + scale in
+  const backgroundVariants = {
+    hidden: { opacity: 0, scale: 1.2 },
+    show: {
+      opacity: 1,
+      scale: 1,
+      transition: { duration: 1, ease: "easeOut" },
+    },
+  };
+
+  // Variants para el texto (título, descripción): 
+  // un poquito de rotación y fade in, para más impacto
+  const itemVariants = {
+    hidden: { opacity: 0, y: 80, rotate: -3 },
+    show: {
+      opacity: 1,
+      y: 0,
+      rotate: 0,
+      transition: { duration: 0.6, ease: "easeOut" },
+    },
+    exit: { opacity: 0, y: -40 },
+  };
+
   return (
     <section className="relative h-screen flex items-center justify-start text-left text-white overflow-hidden px-4">
-      {/* Fondo de la imagen con efecto de edición */}
+      {/* Capa de fondo con animación de escala */}
       <motion.div
         className="absolute inset-0 bg-cover bg-center z-0"
         style={{ backgroundImage: `url('${imagePreview || backgroundImage}')` }}
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.5 }}
+        variants={backgroundVariants}
+        initial="hidden"
+        animate="show"
       >
         {isAdmin && (
           <motion.label
@@ -94,13 +141,19 @@ export const HeroGrid = ({
         )}
       </motion.div>
 
+      {/* Overlay semi-transparente */}
       <div className="absolute inset-0 bg-black/30 z-10" />
 
       <LayoutGroup>
+        {/* Contenedor principal: stagger en hijos */}
         <motion.div
           className="relative z-20 max-w-4xl px-4 md:px-6 flex flex-col items-start space-y-8"
+          variants={containerVariants}
+          initial="hidden"
+          animate="show"
           layout
         >
+          {/* Botones de edición (admin) */}
           {isAdmin && (
             <motion.div
               className="flex gap-2 mb-4"
@@ -141,11 +194,13 @@ export const HeroGrid = ({
 
           <AnimatePresence mode="wait">
             {isEditing ? (
+              // Título editable
               <motion.div
                 key="edit-title"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 20 }}
+                initial="hidden"
+                animate="show"
+                exit="exit"
+                variants={itemVariants}
                 className="w-full"
               >
                 <input
@@ -155,12 +210,14 @@ export const HeroGrid = ({
                 />
               </motion.div>
             ) : (
+              // Título normal
               <motion.h1
                 key="title"
                 className="text-5xl md:text-7xl xl:text-8xl font-black leading-tight"
-                initial={{ opacity: 0, x: -50 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.5 }}
+                initial="hidden"
+                animate="show"
+                exit="exit"
+                variants={itemVariants}
               >
                 {updatedTitle}
               </motion.h1>
@@ -169,11 +226,13 @@ export const HeroGrid = ({
 
           <AnimatePresence mode="wait">
             {isEditing ? (
+              // Descripción editable
               <motion.div
                 key="edit-desc"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 20 }}
+                initial="hidden"
+                animate="show"
+                exit="exit"
+                variants={itemVariants}
                 className="w-full"
               >
                 <textarea
@@ -184,24 +243,28 @@ export const HeroGrid = ({
                 />
               </motion.div>
             ) : (
+              // Descripción normal
               <motion.p
                 key="description"
                 className="text-xl md:text-2xl max-w-2xl"
-                initial={{ opacity: 0, x: -50 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.5, delay: 0.2 }}
+                initial="hidden"
+                animate="show"
+                exit="exit"
+                variants={itemVariants}
               >
                 {updatedDescription}
               </motion.p>
             )}
           </AnimatePresence>
 
+          {/* Botones de Call To Action */}
           {ctaButtons && (
             <motion.div
               className="flex flex-col md:flex-row gap-4"
-              initial={{ opacity: 0, y: 50 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.4 }}
+              initial="hidden"
+              animate="show"
+              exit="exit"
+              variants={itemVariants}
             >
               {ctaButtons}
             </motion.div>
