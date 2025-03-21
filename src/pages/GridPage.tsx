@@ -1,424 +1,426 @@
-// GridPage.tsx
-import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion"; 
+import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { HeroGrid } from "../components/grid/HeroGrid";
 import { ProjectSlider } from "../components/grid/ProjectSlider";
 import { useAuth } from "../context/AuthContext";
 import { FiTrash, FiPlus } from "react-icons/fi";
+import { getSections, createSection, deleteSection, createProject, getProjects, deleteProject, updateProject } from "../../api";
+import { useNavigate } from "react-router-dom";
 
 interface Project {
   id: string;
   title: string;
+  section_id: string;
   category: string;
   image: string;
   description?: string;
 }
 
 interface ProjectSection {
-  category: string;
+  id: string;
+  name: string;
   projects: Project[];
 }
 
 export default function GridPage() {
-  const { user } = useAuth();
+  const { user, token } = useAuth();
+  const [sections, setSections] = useState<ProjectSection[]>([]);
+  const [selectedSectionId, setSelectedSectionId] = useState<string | null>(null);
+  const [showAddProjectModal, setShowAddProjectModal] = useState(false);
+  const [selectedSection, setSelectedSection] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [showAddSectionModal, setShowAddSectionModal] = useState(false);
+  const [editingProjectId, setEditingProjectId] = useState<string | null>(null); // 🆕 Identificador del proyecto en edición
+  const navigate = useNavigate();
 
-  // Hero principal
+const handleProjectClick = (project: Project) => {
+  navigate(`/project/${project.id}`, { state: { project } });
+};
+
+  
+  const [newProject, setNewProject] = useState<Partial<Project>>({
+    title: "",
+    section_id: "",
+    category: "",
+    image: "",
+    description: "",
+  });
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [newSectionName, setNewSectionName] = useState("");
+
+  useEffect(() => {
+    fetchSections();
+  }, []);
   const [heroData, setHeroData] = useState({
     title: "Innovación en Ingeniería",
     description: "Soluciones tecnológicas que transforman la industria moderna",
     backgroundImage: "/public/assets/images/herogrid.jpg",
   });
+  const fetchSections = async () => {
+    try {
+      const sectionsData = await getSections();
+      const projectsData = await getProjects();
 
-  // Secciones con proyectos
-  const [sections, setSections] = useState<ProjectSection[]>([
-    {
-      category: "Automatización Industrial",
-      projects: [
-        {
-          id: "1",
-          title: "Brazo Robótico de Precisión",
-          category: "Robótica",
-          image: "/public/assets/images/proyecto1.jpg",
-          description:
-            "Sistema de manipulación automatizada para líneas de producción",
-        },
-        {
-          id: "2",
-          title: "Línea de Ensamblaje Automatizada",
-          category: "Manufactura",
-          image: "/public/assets/images/proyecto2.jpg",
-          description: "Integración completa de sistemas IoT en cadena de montaje",
-        },
-        {
-          id: "5",
-          title: "Sistema de Detección de Anomalías",
-          category: "Big Data Industrial",
-          image: "/public/assets/images/proyecto5.jpg",
-          description:
-            "Motor de análisis para identificar fallas en tiempo real en procesos industriales.",
-        },
-        {
-          id: "6",
-          title: "Dashboard Predictivo",
-          category: "Machine Learning",
-          image: "/public/assets/images/proyecto6.png",
-          description:
-            "Visualización interactiva de métricas de rendimiento y alertas predictivas.",
-        },
-      ],
-    },
-    {
-      category: "Prototipado Avanzado",
-      projects: [
-        {
-          id: "3",
-          title: "Impresión 3D Industrial",
-          category: "Manufactura Aditiva",
-          image: "/public/assets/images/proyecto5.jpg",
-          description: "Prototipado rápido con materiales compuestos",
-        },
-        {
-          id: "4",
-          title: "Modelado CAD Preciso",
-          category: "Diseño",
-          image: "/public/assets/images/proyecto6.png",
-        },
-        {
-          id: "7",
-          title: "Plataforma IoT en la Nube",
-          category: "Conectividad",
-          image: "/public/assets/images/proyecto7.jpg",
-          description:
-            "Control y monitoreo remoto de sensores y actuadores a través de una solución IoT escalable.",
-        },
-        {
-          id: "8",
-          title: "Gestión de Energía Remota",
-          category: "Eficiencia Energética",
-          image: "/public/assets/images/proyecto8.jpg",
-          description:
-            "Supervisión en línea del consumo energético y ajustes automáticos para reducir costes.",
-        },
-      ],
-    },
-  ]);
+      // 🔹 Ahora se filtran los proyectos por `section_id` en lugar de `category`
+      const formattedSections = sectionsData.map((section: any) => ({
+        ...section,
+        projects: projectsData.filter((p: Project) => p.section_id === section.id),
+      }));
 
-  // Estados para el filtrado
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedSection, setSelectedSection] = useState("");
-
-  // Para saber a qué sección (índice) del array original agregar proyecto
-  const [editingSectionIndex, setEditingSectionIndex] = useState<number | null>(null);
-
-  // Nueva sección
-  const [newSection, setNewSection] = useState<Partial<ProjectSection>>({
-    category: "",
-    projects: [],
-  });
-
-  // Nuevo proyecto
-  const [newProject, setNewProject] = useState<Partial<Project>>({
-    title: "",
-    category: "",
-    image: "",
-    description: "",
-  });
-
-  // Modales
-  const [showAddSectionModal, setShowAddSectionModal] = useState(false);
-  const [showAddProjectModal, setShowAddProjectModal] = useState(false);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-
-  // 1) Mapeamos cada sección con su índice original
-  const sectionsWithIndex = sections.map((section, index) => ({
-    ...section,
-    originalIndex: index, // guardamos aquí el índice en el array
-  }));
-
-  // 2) Filtramos según la sección seleccionada y el searchTerm
-  const filteredSections = sectionsWithIndex
-    .filter((s) => (selectedSection === "" ? true : s.category === selectedSection))
-    .map((s) => {
-      const filteredProjects = s.projects.filter((proj) =>
-        proj.title.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-      return { ...s, projects: filteredProjects };
-    });
-
-  /* ======================
-   * Funciones principales
-   * ====================== */
-
-  // Guardar el Hero
-  const handleHeroSave = (newData: { title: string; description: string; image: string }) => {
-    setHeroData((prev) => ({
-      ...prev,
-      ...newData,
-      backgroundImage: newData.image || prev.backgroundImage,
-    }));
-  };
-
-  // Secciones
-  const handleAddSection = () => {
-    if (newSection.category) {
-      setSections((prev) => [...prev, newSection as ProjectSection]);
-      setShowAddSectionModal(false);
-      setNewSection({ category: "", projects: [] });
-    } else {
-      alert("Por favor, completa todos los campos.");
+      setSections(formattedSections);
+    } catch (error) {
+      console.error("❌ Error al obtener secciones y proyectos:", error);
     }
   };
 
-  const handleDeleteSection = (index: number) => {
-    setSections((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  // Proyectos
-  const handleAddProject = (sectionIndex: number) => {
-    // Verificamos que el índice sea válido dentro del array sections
-    if (sectionIndex < 0 || sectionIndex >= sections.length) {
-      alert("Sección no válida.");
-      return;
-    }
-
-    // Checamos que los campos del nuevo proyecto estén completos
-    if (newProject.title && newProject.category && newProject.image) {
-      // Clonamos las secciones
-      const updatedSections = [...sections];
-      updatedSections[sectionIndex].projects = updatedSections[sectionIndex].projects || [];
-      updatedSections[sectionIndex].projects.push(newProject as Project);
-
-      setSections(updatedSections);
-      setShowAddProjectModal(false);
-      // Limpiamos
-      setNewProject({ title: "", category: "", image: "", description: "" });
-      setImagePreview(null);
-    } else {
-      alert("Por favor, completa todos los campos.");
-    }
-  };
-
-  const handleDeleteProject = (sectionIndex: number, projectIndex: number) => {
-    const updatedSections = [...sections];
-    updatedSections[sectionIndex].projects = updatedSections[sectionIndex].projects.filter(
-      (_, i) => i !== projectIndex
-    );
-    setSections(updatedSections);
-  };
-
-  const handleEditProject = (sectionIndex: number, projectIndex: number, updatedProject: Project) => {
-    const updatedSections = [...sections];
-    updatedSections[sectionIndex].projects[projectIndex] = updatedProject;
-    setSections(updatedSections);
-  };
-
-  // Manejo de imagen
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      const url = URL.createObjectURL(file);
-      setNewProject({ ...newProject, image: url });
-      setImagePreview(url);
+      setSelectedImage(file);
+      setImagePreview(URL.createObjectURL(file));
+    }
+  };
+  // 🔹 Eliminar sección
+  const handleDeleteSection = async (sectionId: string) => {
+    if (!window.confirm("¿Estás seguro de eliminar esta sección?")) return;
+    try {
+      await deleteSection(sectionId, token);
+      fetchSections();
+    } catch (error) {
+      console.error("❌ Error al eliminar sección:", error);
     }
   };
 
-  // Para el combo de secciones
-  const allCategories = sections.map((s) => s.category);
+  // 🔹 Agregar nueva sección
+  const handleAddSection = async () => {
+    if (!newSectionName.trim()) {
+      alert("El nombre de la sección es obligatorio.");
+      return;
+    }
+    try {
+      await createSection(newSectionName, token);
+      setNewSectionName("");
+      setShowAddSectionModal(false);
+      fetchSections();
+    } catch (error) {
+      console.error("❌ Error al agregar sección:", error);
+    }
+  };
+  const handleAddProject = async () => {
+    if (!newProject.title || !selectedImage || !selectedSectionId || !newProject.category || !newProject.description) {
+      alert("Completa todos los campos antes de agregar un proyecto.");
+      return;
+    }
+
+    try {
+      await createProject(
+        {
+          title: newProject.title,
+          category: newProject.category,
+          description: newProject.description,
+          section_id: selectedSectionId, // 🔹 Asegurar que section_id se pase
+        },
+        selectedImage,
+        token
+      );
+
+      setShowAddProjectModal(false);
+      setNewProject({ title: "", category: "", description: "", image: "" });
+      setImagePreview(null);
+      setSelectedImage(null);
+      setSelectedSectionId(null);
+      fetchSections();
+    } catch (error) {
+      console.error("❌ Error al agregar proyecto:", error);
+    }
+  };
+
+
+// 🔹 Función para eliminar un proyecto
+const handleDeleteProject = async (projectId: string) => {
+  if (!window.confirm("¿Estás seguro de eliminar este proyecto?")) return;
+
+  try {
+    // Verificar si el proyecto existe antes de eliminarlo
+    const projectExists = sections.some(section => section.projects.some(p => p.id === projectId));
+    if (!projectExists) {
+      alert("El proyecto ya no existe.");
+      return;
+    }
+
+    await deleteProject(projectId, token);
+    fetchSections();
+  } catch (error) {
+    console.error("❌ Error al eliminar proyecto:", error);
+  }
+};
+
+
+const handleSaveProject = async () => {
+  if (!newProject.title || !selectedSectionId || !newProject.category || !newProject.description) {
+    alert("Completa todos los campos antes de guardar.");
+    return;
+  }
+
+  try {
+    if (editingProjectId) {
+      // Verificar si el proyecto aún existe antes de actualizar
+      const projectExists = sections.some(section => section.projects.some(p => p.id === editingProjectId));
+      if (!projectExists) {
+        alert("El proyecto no existe.");
+        setEditingProjectId(null);
+        return;
+      }
+
+      await updateProject(
+        editingProjectId,
+        {
+          title: newProject.title,
+          category: newProject.category,
+          description: newProject.description,
+          section_id: selectedSectionId,
+        },
+        selectedImage,
+        token
+      );
+    } else {
+      await createProject(
+        {
+          title: newProject.title,
+          category: newProject.category,
+          description: newProject.description,
+          section_id: selectedSectionId,
+        },
+        selectedImage,
+        token
+      );
+    }
+
+    setShowAddProjectModal(false);
+    setNewProject({ title: "", category: "", description: "", image: "" });
+    setImagePreview(null);
+    setSelectedImage(null);
+    setEditingProjectId(null);
+    fetchSections();
+  } catch (error) {
+    console.error("❌ Error al guardar proyecto:", error);
+  }
+};
+
+const handleEditProject = (project: Project) => {
+  setNewProject({
+    title: project.title,
+    category: project.category,
+    description: project.description,
+    section_id: project.section_id,
+    image: project.image, // Mantener la imagen previa si no se cambia
+  });
+
+  setEditingProjectId(project.id);
+  setSelectedSectionId(project.section_id);
+
+  // 🔹 Verificar si la imagen ya tiene una URL completa
+  const imageUrl = project.image.startsWith("http") 
+    ? project.image 
+    : `http://localhost:5000${project.image}`;
+
+  setImagePreview(imageUrl); // Mostrar imagen existente
+  setShowAddProjectModal(true);
+};
+
+
 
   return (
     <main className="overflow-hidden">
       {/* Hero */}
-      <HeroGrid
-        title={heroData.title}
-        description={heroData.description}
-        backgroundImage={heroData.backgroundImage}
-        isAdmin={user?.role === "admin"}
-        onSave={handleHeroSave}
-      />
+      <HeroGrid title={heroData.title} description={heroData.description} backgroundImage={heroData.backgroundImage} />
 
-      {/* Controles de Búsqueda / Filtro */}
+      {/* Filtro de Búsqueda */}
       <section className="flex flex-col sm:flex-row items-center justify-center gap-4 px-4 mt-6 mb-4">
-        {/* Input para buscar por nombre */}
         <input
           type="text"
           placeholder="Buscar proyectos por título..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full sm:w-1/3 p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[var(--color-primario)]"
+          className="w-full sm:w-1/3 p-2 border border-gray-300 rounded focus:ring-2 focus:ring-[var(--color-primario)]"
         />
 
-        {/* Filtro de sección */}
         <select
           value={selectedSection}
           onChange={(e) => setSelectedSection(e.target.value)}
-          className="w-full sm:w-1/4 p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[var(--color-primario)]"
+          className="w-full sm:w-1/4 p-2 border border-gray-300 rounded focus:ring-2 focus:ring-[var(--color-primario)]"
         >
           <option value="">Todas las secciones</option>
-          {allCategories.map((cat) => (
-            <option key={cat} value={cat}>
-              {cat}
+          {sections.map((s) => (
+            <option key={s.id} value={s.name}>
+              {s.name}
             </option>
           ))}
         </select>
       </section>
 
-      {/* ANIMATEPRESENCE para animar la entrada/salida de secciones */}
-      <AnimatePresence mode="sync">
-        {filteredSections.map((section) => (
+      {/* Renderizar Secciones */}
+      <AnimatePresence>
+        {sections.map((section) => (
           <motion.div
-            // Usamos un key único basado en la categoría y originalIndex
-            key={`${section.category}-${section.originalIndex}`}
+            key={section.id}
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -30 }}
             transition={{ duration: 0.4 }}
-            className="relative"
+            className="relative p-6 border-b border-gray-300"
           >
-            {/* Botones de admin en la esquina */}
+
+            {/* 🔹 Botones de Acción (solo visibles si es admin) */}
             {user?.role === "admin" && (
               <div className="absolute top-4 right-4 flex gap-2">
+                {/* Botón para eliminar sección */}
                 <button
-                  onClick={() => handleDeleteSection(section.originalIndex)}
-                  className="p-2 bg-white/80 backdrop-blur-sm rounded-full hover:bg-white transition-colors"
+                  onClick={() => handleDeleteSection(section.id)}
+                  className="p-2 bg-red-500 text-white rounded-full hover:bg-red-700 transition"
                 >
-                  <FiTrash className="text-xl text-red-600" />
+                  <FiTrash className="text-xl" />
                 </button>
+                {/* Botón para agregar proyecto */}
                 <button
                   onClick={() => {
-                    // Ajustamos editingSectionIndex con el índice original
-                    setEditingSectionIndex(section.originalIndex);
+                    console.log("✅ Sección seleccionada:", section);
+                    setSelectedSectionId(section.id);
+                    setNewProject({
+                      title: "",
+                      section_id: section.id,
+                      category: section.name,
+                      image: "",
+                      description: "",
+                    });
                     setShowAddProjectModal(true);
                   }}
-                  className="p-2 bg-white/80 backdrop-blur-sm rounded-full hover:bg-white transition-colors"
+
+                  className="p-2 bg-blue-500 text-white rounded-full hover:bg-blue-700 transition"
                 >
-                  <FiPlus className="text-xl text-[var(--color-primario)]" />
+                  <FiPlus className="text-xl" />
                 </button>
+
+
               </div>
             )}
 
-            {/* Renderizamos la grilla de proyectos */}
-            <ProjectSlider
-              title={section.category}
-              projects={section.projects}
-              onDeleteProject={(projectIndex) =>
-                handleDeleteProject(section.originalIndex, projectIndex)
-              }
-              onEditProject={(projectIndex, updatedProject) =>
-                handleEditProject(section.originalIndex, projectIndex, updatedProject)
-              }
-              isAdmin={user?.role === "admin"}
-            />
+            {/* 🔹 Renderizar proyectos dentro de la sección */}
+            <ProjectSlider 
+  title={section.name} 
+  projects={section.projects} 
+  onDeleteProject={handleDeleteProject} 
+  onEditProject={handleEditProject} 
+  onProjectClick={handleProjectClick}  // ✅ Agregar función de clic
+  isAdmin={user?.role === "admin"} 
+/>
+
+
           </motion.div>
         ))}
+        
       </AnimatePresence>
 
+
+      {/* Botón Agregar Sección */}
       {user?.role === "admin" && (
-        <div className="flex justify-center mt-8">
-          <button
-            onClick={() => setShowAddSectionModal(true)}
-            className="px-6 py-3 bg-[var(--color-primario)] text-white rounded-full hover:bg-[#5a2fc2] transition-colors shadow-lg hover:shadow-xl flex items-center"
-          >
-            <FiPlus className="w-5 h-5 mr-3" />
-            <span className="text-sm md:text-base">Agregar Nueva Sección</span>
-          </button>
-        </div>
+        <button onClick={() => setShowAddSectionModal(true)} className="mt-8 px-6 py-3 bg-[var(--color-primario)] text-white rounded-full hover:bg-[#5a2fc2] transition">
+          <FiPlus className="mr-2" /> Agregar Sección
+        </button>
       )}
 
-      {/* Modal para agregar nueva sección */}
+{showAddProjectModal && (
+  <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+    <div className="bg-white rounded-xl p-6 max-w-md w-full space-y-6">
+      <h3 className="text-2xl font-bold mb-6">
+        {editingProjectId ? "Editar Proyecto" : "Agregar Nuevo Proyecto"}
+      </h3>
+
+      <p className="text-gray-600 mb-3">
+        <strong>Sección:</strong> {sections.find(s => s.id === selectedSectionId)?.name || "N/A"}
+      </p>
+
+      <input
+        placeholder="Título"
+        className="w-full p-3 border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        value={newProject.title ?? ""}
+        onChange={(e) => setNewProject({ ...newProject, title: e.target.value })}
+      />
+
+      <input
+        placeholder="Categoría"
+        className="w-full p-3 border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        value={newProject.category ?? ""}
+        onChange={(e) => setNewProject({ ...newProject, category: e.target.value })}
+      />
+
+      <div className="flex flex-col items-center">
+        <label className="w-full p-3 border border-gray-400 rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors">
+          <span className="text-gray-600">Subir imagen (opcional)</span>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleImageChange}
+            className="hidden"
+          />
+        </label>
+        
+        {/* 🆕 Mostrar imagen previa si existe */}
+        {imagePreview && (
+          <img
+            src={imagePreview}
+            alt="Vista previa"
+            className="mt-4 w-48 h-48 object-cover rounded-lg shadow-md"
+          />
+        )}
+      </div>
+
+      <textarea
+        placeholder="Descripción"
+        className="w-full p-3 border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        rows={4}
+        value={newProject.description ?? ""}
+        onChange={(e) => setNewProject({ ...newProject, description: e.target.value })}
+      />
+
+      <div className="flex justify-end gap-3">
+        <button
+          onClick={() => {
+            setShowAddProjectModal(false);
+            setEditingProjectId(null); // 🆕 Resetear modo edición al cerrar
+          }}
+          className="px-5 py-2 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+        >
+          Cancelar
+        </button>
+        <button
+          onClick={handleSaveProject}
+          className="px-5 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-700 transition-colors"
+        >
+          {editingProjectId ? "Actualizar" : "Guardar"}
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
+
+
+
+      {/* Modal Agregar Sección */}
       {showAddSectionModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl p-6 max-w-md w-full space-y-6">
-            <h3 className="text-2xl font-bold mb-6">Agregar Nueva Sección</h3>
-            <input
-              placeholder="Nombre de la Sección"
-              className="w-full p-3 border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primario)]"
-              value={newSection.category ?? ""}
-              onChange={(e) => setNewSection({ ...newSection, category: e.target.value })}
-            />
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setShowAddSectionModal(false)}
-                className="px-5 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleAddSection}
-                className="px-5 py-2 bg-[var(--color-primario)] text-white rounded-lg hover:bg-[#5a2fc2] transition-colors"
-              >
-                Guardar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal para agregar nuevo proyecto */}
-      {showAddProjectModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl p-6 max-w-md w-full space-y-6">
-            <h3 className="text-2xl font-bold mb-6">Agregar Nuevo Proyecto</h3>
-            <input
-              placeholder="Título"
-              className="w-full p-3 border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primario)]"
-              value={newProject.title ?? ""}
-              onChange={(e) => setNewProject({ ...newProject, title: e.target.value })}
-            />
-            <input
-              placeholder="Nombre de la categoría"
-              className="w-full p-3 border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primario)]"
-              value={newProject.category ?? ""}
-              onChange={(e) => setNewProject({ ...newProject, category: e.target.value })}
-            />
-            <div className="flex flex-col items-center">
-              <label className="w-full p-3 border border-gray-400 rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors">
-                <span className="text-gray-600">Subir imagen</span>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageChange}
-                  className="hidden"
-                />
-              </label>
-              {imagePreview && (
-                <img
-                  src={imagePreview}
-                  alt="Vista previa"
-                  className="mt-4 w-48 h-48 object-cover rounded-lg shadow-md"
-                />
-              )}
-            </div>
-            <textarea
-              placeholder="Descripción"
-              className="w-full p-3 border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primario)]"
-              rows={4}
-              value={newProject.description ?? ""}
-              onChange={(e) => setNewProject({ ...newProject, description: e.target.value })}
-            />
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setShowAddProjectModal(false)}
-                className="px-5 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={() => {
-                  // Usamos editingSectionIndex para agregar proyecto en la sección original
-                  if (editingSectionIndex !== null && editingSectionIndex >= 0) {
-                    handleAddProject(editingSectionIndex);
-                  } else {
-                    alert("Selecciona una sección válida antes de agregar un proyecto.");
-                  }
-                }}
-                className="px-5 py-2 bg-[var(--color-primario)] text-white rounded-lg hover:bg-[#5a2fc2] transition-colors"
-              >
-                Guardar
-              </button>
-            </div>
+          <div className="bg-white rounded-xl p-6 max-w-md w-full">
+            <h3 className="text-2xl font-bold mb-6">Agregar Sección</h3>
+            <input placeholder="Nombre de la sección" className="w-full p-3 border rounded-lg" value={newSectionName} onChange={(e) => setNewSectionName(e.target.value)} />
+            <button onClick={handleAddSection} className="mt-4 px-5 py-2 bg-[var(--color-primario)] text-white rounded-lg hover:bg-[#5a2fc2] transition">
+              Guardar
+            </button>
           </div>
         </div>
       )}
     </main>
   );
 }
+

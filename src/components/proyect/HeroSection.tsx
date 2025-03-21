@@ -5,20 +5,18 @@ import {useNavigate} from "react-router-dom"
 import { FiEdit, FiImage, FiUpload } from "react-icons/fi";
 import { useAuth } from "../../context/AuthContext";
 import Modal from "../common/Modal"; // Asume que tienes un componente Modal genérico
-
-const HeroSection = () => {
+interface HeroSectionProps {
+  title: string;
+  description: string;
+  image: string;
+}
+const HeroSection: React.FC<HeroSectionProps> = ({ title, description, image }) => {
   const { user } = useAuth();
   const navigate = useNavigate()
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [isEditingDescription, setIsEditingDescription] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [title, setTitle] = useState("Brazo Robótico");
-  const [description, setDescription] = useState(
-    "Lorem, ipsum dolor sit amet consectetur adipisicing elit. Praesentium accusantium dignissimos alias voluptatem, natus aliquam quaerat explicabo doloribus placeat adipisci incidunt earum nesciunt modi, illum laudantium at maiores omnis ad!"
-  );
-  const [backgroundImage, setBackgroundImage] = useState(
-    "/assets/images/proyecto1.jpg"
-  );
+  
   const [localImage, setLocalImage] = useState<File | null>(null);
   
   const handleProject = () => {
@@ -28,7 +26,6 @@ const HeroSection = () => {
   const handleSaveBackgroundImage = () => {
     if (localImage) {
       const imageUrl = URL.createObjectURL(localImage);
-      setBackgroundImage(imageUrl);
     }
     setIsModalOpen(false);
   };
@@ -47,7 +44,7 @@ const HeroSection = () => {
       {/* Fondo de la imagen */}
       <div
         className="absolute top-0 left-0 w-full h-full bg-cover bg-center z-0"
-        style={{ backgroundImage: `url(${backgroundImage})` }}
+        style={{ backgroundImage: `url(${image})` }}
       ></div>
 
       {/* Overlay para mejorar la legibilidad */}

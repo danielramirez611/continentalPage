@@ -1,321 +1,325 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { IconSelector } from "../common/IconSelector";
-import { ProjectData } from "../../data/project";
+import { 
+  uploadFeatureMedia, createFeature, getFeatures, deleteFeature, 
+  getStats, addStat, deleteStat, getProjectExtras, addProjectExtra, deleteProjectExtra 
+} from "../../../api";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faChevronDown, faChevronUp } from "@fortawesome/free-solid-svg-icons";
+import { faTrash, faPlus } from "@fortawesome/free-solid-svg-icons";
+import { useParams } from "react-router-dom";
 
 interface Feature {
-  icon: any;
+  id?: number;
+  icon_key: string;
   title: string;
-  description: string;
-  stat: string;
+  subtitle: string;
+  media_type: "video";
+  media_url?: string;
 }
 
 interface Stat {
-  icon: any;
+  id?: number;
+  icon_key: string;
+  title: string;
+  description: string;
   text: string;
 }
 
-interface FeaturesFormProps {
-  project: ProjectData;
-  setProject: (data: ProjectData) => void;
+interface Extra {
+  id?: number;
+  title: string;
+  stat?: string;
+  description?: string;
 }
 
-const FeaturesForm = ({ project, setProject }: FeaturesFormProps) => {
+interface FeaturesFormProps {
+  projectId?: number;
+}
+
+const FeaturesForm = ({ projectId }: FeaturesFormProps) => {
+  const params = useParams<{ id?: string }>();
+  const paramProjectId = params.id ? Number(params.id) : undefined;
+  const finalProjectId = projectId ?? paramProjectId;
+
+  if (!finalProjectId || isNaN(finalProjectId)) {
+    console.error("❌ Error: projectId no fue recibido o no es válido.", { finalProjectId });
+    return (
+      <div className="text-red-500 font-bold p-4 border border-red-600 rounded-lg bg-red-100">
+        ❌ Error: No se pudo cargar la configuración del proyecto. Verifica la URL o selecciona un proyecto válido.
+      </div>
+    );
+  }
+
+  const [features, setFeatures] = useState<Feature[]>([]);
+  const [stats, setStats] = useState<Stat[]>([]);
+  const [extras, setExtras] = useState<Extra[]>([]);
   const [newFeature, setNewFeature] = useState<Partial<Feature>>({});
   const [newStat, setNewStat] = useState<Partial<Stat>>({});
-  const [showAddFeatureModal, setShowAddFeatureModal] = useState(false);
-  const [showAddStatModal, setShowAddStatModal] = useState(false);
+  const [newExtra, setNewExtra] = useState<Partial<Extra>>({});
+  const [selectedFeatureId, setSelectedFeatureId] = useState<number | null>(null);
+  const [showFeatureModal, setShowFeatureModal] = useState(false);
+  const [showStatModal, setShowStatModal] = useState(false);
+  const [showExtraModal, setShowExtraModal] = useState(false);
   const [activeTab, setActiveTab] = useState("features");
 
-  const handleAddFeature = () => {
-    if (newFeature.title && newFeature.description && newFeature.stat) {
-      setProject({
-        ...project,
-        features: [...project.features, newFeature as Feature],
-        showFeatures: true,
-      });
-      setNewFeature({});
-      setShowAddFeatureModal(false);
-    } else {
-      alert("Por favor, completa todos los campos.");
+  useEffect(() => {
+    fetchFeatures();
+    fetchStats();
+    fetchExtras();
+  }, [finalProjectId]);
+
+  const fetchFeatures = async () => {
+    try {
+      const data = await getFeatures(finalProjectId);
+      setFeatures(data);
+    } catch (error) {
+      console.error("❌ Error al obtener features:", error);
     }
   };
 
-  const handleAddStat = () => {
-    if (newStat.icon && newStat.text) {
-      setProject({
-        ...project,
-        stats: [...project.stats, newStat as Stat],
-      });
-      setNewStat({});
-      setShowAddStatModal(false);
-    } else {
-      alert("Por favor, completa todos los campos.");
+  const fetchStats = async () => {
+    try {
+      const data = await getStats(finalProjectId);
+      setStats(data);
+    } catch (error) {
+      console.error("❌ Error al obtener stats:", error);
     }
   };
 
-  const handleVideoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      const url = URL.createObjectURL(file);
-      setProject({ ...project, featuresVideoUrl: url });
+  const fetchExtras = async () => {
+    try {
+      const data = await getProjectExtras(finalProjectId);
+      setExtras(data);
+    } catch (error) {
+      console.error("❌ Error al obtener extras:", error);
     }
   };
+
+  const handleAddExtra = async () => {
+    if (!newExtra.title) {
+      alert("El título del extra es obligatorio.");
+      return;
+    }
+    if (!selectedFeatureId) {
+      console.error("❌ Error: No se ha seleccionado una característica para el extra.");
+      return;
+    }
+
+    try {
+      await addProjectExtra(finalProjectId, newExtra, "");
+      fetchExtras();
+      setShowExtraModal(false);
+      setNewExtra({});
+    } catch (error) {
+      console.error("❌ Error al agregar extra:", error);
+    }
+  };
+
+
+  interface Extra {
+    id?: number;
+    title: string;
+    stat?: string;
+    description?: string;
+  }
+  const handleAddFeature = async () => {
+    console.log("📌 Datos actuales de newFeature:", newFeature);
+
+    // 🔹 Verificar que los campos obligatorios existan
+    if (!newFeature.title || !newFeature.media_type) {
+        console.warn("❌ Falta completar algunos campos:", newFeature);
+        alert("El título y el tipo de media son obligatorios.");
+        return;
+    }
+
+    try {
+        let mediaUrl = null;
+        if (newFeature.media_type && newFeature.media_file) {
+            console.log("🔄 Subiendo archivo...", newFeature.media_file);
+            mediaUrl = await uploadFeatureMedia(newFeature.media_file, newFeature.media_type, "");
+            console.log("✅ Archivo subido con URL:", mediaUrl);
+        }
+
+        if (!mediaUrl) {
+            console.error("❌ No se pudo obtener la URL del archivo subido.");
+            alert("Hubo un problema al subir el archivo.");
+            return;
+        }
+
+        const featureData = {
+            project_id: finalProjectId,
+            title: newFeature.title,
+            subtitle: newFeature.subtitle ?? "", // 🔹 Si está `undefined`, lo convierte en ""
+            icon_key: newFeature.icon_key ?? "", // 🔹 Si está `undefined`, lo convierte en ""
+            media_type: newFeature.media_type,
+            media_url: mediaUrl,
+        };
+
+        console.log("📤 Enviando datos al backend:", featureData);
+
+        if (!finalProjectId || isNaN(finalProjectId)) {
+            console.error("❌ Error: `finalProjectId` es inválido antes de enviar la solicitud.", { finalProjectId });
+            alert("Error: No se pudo obtener el ID del proyecto.");
+            return;
+        }
+
+        await createFeature(finalProjectId, featureData, newFeature.media_file, "");
+        fetchFeatures();
+        setShowFeatureModal(false);
+        setNewFeature({}); // 🔹 Limpiar el formulario después de enviar
+        console.log("✅ Característica agregada correctamente.");
+    } catch (error) {
+        console.error("❌ Error al agregar feature:", error);
+    }
+};
+
+
+  const handleAddStat = async () => {
+    if (!newStat.icon_key || !newStat.title || !newStat.description || !newStat.text) {
+      alert("Todos los campos son obligatorios.");
+      return;
+    }
+
+    if (!finalProjectId || isNaN(finalProjectId)) {
+      console.error("❌ Error: `finalProjectId` es inválido antes de enviar la solicitud.", { finalProjectId });
+      alert("Error: No se pudo obtener el ID del proyecto.");
+      return;
+    }
+    
+    await addStat(finalProjectId, newStat, "");
+        fetchStats();
+    setShowStatModal(false);
+    setNewStat({});
+  };
+  
 
   return (
     <div className="space-y-6">
-      {/* Sección de Título y Subtítulo */}
-      <div className="border-gray-300 border-b pb-3">
-        <h2 className="text-2xl font-bold">Configurar Características</h2>
-        <p className="text-gray-600 text-sm">
-          Agrega o edita las características técnicas de tu proyecto.
-        </p>
-      </div>
-
       {/* Pestañas */}
       <div className="flex space-x-4 border-b border-gray-200">
         <button
           onClick={() => setActiveTab("features")}
-          className={`px-4 py-2 ${
-            activeTab === "features"
-              ? "border-b-2 border-purple-500 text-primario"
-              : "text-gray-500"
-          }`}
+          className={`px-4 py-2 ${activeTab === "features" ? "border-b-2 border-purple-500 text-purple-500" : "text-gray-500"}`}
         >
           Características
         </button>
         <button
           onClick={() => setActiveTab("stats")}
-          className={`px-4 py-2 ${
-            activeTab === "stats"
-              ? "border-b-2 border-purple-500 text-purple-500"
-              : "text-gray-500"
-          }`}
+          className={`px-4 py-2 ${activeTab === "stats" ? "border-b-2 border-purple-500 text-purple-500" : "text-gray-500"}`}
         >
           Estadísticas
         </button>
       </div>
-
-      {/* Contenido de las pestañas */}
+{/* Estadísticas */}
+{activeTab === "stats" && (
+        <div className="space-y-6">
+          <button onClick={() => setShowStatModal(true)} className="w-full p-4 bg-purple-500 text-white rounded">
+            <FontAwesomeIcon icon={faPlus} /> Agregar Estadística
+          </button>
+        </div>
+      )}
+      {/* Características */}
       {activeTab === "features" && (
         <div className="space-y-6">
-          {/* Título y Subtítulo de la Sección */}
-          <div>
-            <label className="block text-sm font-medium mb-1">Título de la sección</label>
-            <input
-              value={project.featuresTitle}
-              onChange={(e) => setProject({ ...project, featuresTitle: e.target.value })}
-              className="w-full p-2 border-gray-300 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-              placeholder="Ej. Características Técnicas"
-            />
-          </div>
+          <button onClick={() => setShowFeatureModal(true)} className="w-full p-4 bg-purple-500 text-white rounded">
+            <FontAwesomeIcon icon={faPlus} /> Agregar Característica
+          </button>
 
-          <div>
-            <label className="block text-sm font-medium mb-1">Subtítulo</label>
-            <textarea
-              value={project.featuresSubtitle}
-              onChange={(e) => setProject({ ...project, featuresSubtitle: e.target.value })}
-              className="w-full p-2 border-gray-300 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-              placeholder="Ej. Descubre las características que hacen único nuestro proyecto"
-            />
-          </div>
-
-          {/* Video de Características */}
-          <div>
-            <label className="block text-sm font-medium mb-1">Video de Características</label>
-            <input
-              type="file"
-              accept="video/mp4"
-              onChange={handleVideoChange}
-              className="w-full p-2 border-gray-300 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-            />
-          </div>
-
-          {/* Sección de Características */}
-          <div className="border border-gray-200 rounded-lg p-4">
-            <div className="mt-4 space-y-4">
-              {project.features.map((feature, index) => (
-                <div
-                  key={index}
-                  className="border-gray-300 border p-4 rounded-lg bg-white shadow-sm transition hover:shadow-md"
+          {features.map((feature) => (
+            <div key={feature.id} className="p-4 border rounded-lg flex justify-between items-center">
+              <div>
+                <h3 className="font-bold">{feature.title}</h3>
+                <p>{feature.subtitle}</p>
+              </div>
+              <div className="space-x-2">
+                <button
+                  onClick={() => {
+                    setSelectedFeatureId(feature.id || null);
+                    setShowExtraModal(true);
+                  }}
+                  className="px-3 py-1 bg-blue-500 text-white rounded"
                 >
-                  <div className="mb-2">
-                    <label className="block text-sm font-medium mb-1">Título</label>
-                    <input
-                      value={feature.title}
-                      onChange={(e) => {
-                        const newFeatures = [...project.features];
-                        newFeatures[index].title = e.target.value;
-                        setProject({ ...project, features: newFeatures });
-                      }}
-                      className="w-full p-2 border-gray-300 border rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
-                      placeholder="Ej. Alto Rendimiento"
-                    />
-                  </div>
-                  <div className="mb-2">
-                    <label className="block text-sm font-medium mb-1">Descripción</label>
-                    <textarea
-                      value={feature.description}
-                      onChange={(e) => {
-                        const newFeatures = [...project.features];
-                        newFeatures[index].description = e.target.value;
-                        setProject({ ...project, features: newFeatures });
-                      }}
-                      className="w-full p-2 border-gray-300 border rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
-                      placeholder="Ej. Ofrecemos el mejor rendimiento del mercado"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Estadística</label>
-                    <input
-                      value={feature.stat}
-                      onChange={(e) => {
-                        const newFeatures = [...project.features];
-                        newFeatures[index].stat = e.target.value;
-                        setProject({ ...project, features: newFeatures });
-                      }}
-                      className="w-full p-2 border-gray-300 border rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
-                      placeholder="Ej. 99.9% de efectividad"
-                    />
-                  </div>
-                </div>
-              ))}
-
-              {/* Botón para agregar nueva característica */}
-              <button
-                onClick={() => setShowAddFeatureModal(true)}
-                className="w-full flex items-center justify-center p-6 bg-white rounded-xl border border-dashed border-gray-300 hover:border-purple-500 hover:bg-purple-50 transition-colors"
-              >
-                <span className="text-purple-500 font-semibold">Agregar Característica</span>
-              </button>
+                  + Agregar Extra
+                </button>
+                <button className="px-3 py-1 bg-red-500 text-white rounded">
+                  <FontAwesomeIcon icon={faTrash} />
+                </button>
+              </div>
             </div>
-          </div>
+          ))}
         </div>
       )}
-
-      {activeTab === "stats" && (
-        <div className="space-y-6">
-          {/* Sección de Estadísticas e Íconos */}
-          <div className="border border-gray-200 rounded-lg p-4">
-            <div className="mt-4 space-y-4">
-              {project.stats.map((stat, index) => (
-                <div
-                  key={index}
-                  className="border-gray-300 border p-4 rounded-lg bg-white shadow-sm transition hover:shadow-md"
-                >
-                  <div className="mb-2">
-                    <label className="block text-sm font-medium mb-1">Ícono</label>
-                    <IconSelector
-                      selected={stat.icon}
-                      onSelect={(icon) => {
-                        const newStats = [...project.stats];
-                        newStats[index].icon = icon;
-                        setProject({ ...project, stats: newStats });
-                      }}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Texto</label>
-                    <input
-                      value={stat.text}
-                      onChange={(e) => {
-                        const newStats = [...project.stats];
-                        newStats[index].text = e.target.value;
-                        setProject({ ...project, stats: newStats });
-                      }}
-                      className="w-full p-2 border-gray-300 border rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
-                      placeholder="Ej. 2x más rápido"
-                    />
-                  </div>
-                </div>
-              ))}
-
-              {/* Botón para agregar nueva estadística */}
-              <button
-                onClick={() => setShowAddStatModal(true)}
-                className="w-full flex items-center justify-center p-6 bg-white rounded-xl border border-dashed border-gray-300 hover:border-purple-500 hover:bg-purple-50 transition-colors"
-              >
-                <span className="text-purple-500 font-semibold">Agregar Estadística</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modales para agregar nueva característica y estadística */}
-      {showAddFeatureModal && (
+{/* Modal para agregar Característica */}
+{showFeatureModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-xl p-6 max-w-md w-full space-y-4">
+          <h3 className="text-xl font-bold mb-4">Agregar Seccion</h3>
+          <input placeholder="Título" className="w-full p-2 border rounded" onChange={(e) => setNewFeature({ ...newFeature, title: e.target.value })} />
+            <input placeholder="Subtítulo" className="w-full p-2 border rounded" onChange={(e) => setNewFeature({ ...newFeature, subtitle: e.target.value })} />
+            <input
+  type="file"
+  accept="image/*,video/*"
+  onChange={(e) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      const isVideo = file.type.startsWith("video/");
+      setNewFeature({
+        ...newFeature,
+        media_file: file,
+        media_type: isVideo ? "video" : "image", // 🟢 Asigna el media_type correctamente
+      });
+    }
+  }}
+/>
             <h3 className="text-xl font-bold mb-4">Agregar Nueva Característica</h3>
-            <div className="space-y-4">
-              <input
-                placeholder="Estadística"
-                className="w-full p-2 border rounded"
-                value={newFeature.stat ?? ""}
-                onChange={(e) => setNewFeature({ ...newFeature, stat: e.target.value })}
-              />
-              <input
-                placeholder="Título"
-                className="w-full p-2 border rounded"
-                value={newFeature.title ?? ""}
-                onChange={(e) => setNewFeature({ ...newFeature, title: e.target.value })}
-              />
-              <textarea
-                placeholder="Descripción"
-                className="w-full p-2 border rounded"
-                value={newFeature.description ?? ""}
-                onChange={(e) => setNewFeature({ ...newFeature, description: e.target.value })}
-              />
-            </div>
-            <div className="flex justify-end gap-2 mt-4">
-              <button
-                onClick={() => setShowAddFeatureModal(false)}
-                className="px-4 py-2 text-gray-500 hover:bg-gray-100 rounded"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleAddFeature}
-                className="px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600"
-              >
-                Guardar
-              </button>
-            </div>
+              
+            <IconSelector
+              selected={newFeature.icon_key}
+              onSelect={(icon) => setNewFeature({ ...newFeature, icon_key: icon })}
+            />
+            <button onClick={handleAddFeature} className="px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600">Guardar</button>
           </div>
         </div>
       )}
-
-      {showAddStatModal && (
+      {/* Modal para agregar Extra */}
+      {showExtraModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl p-6 max-w-md w-full space-y-4">
+            <h3 className="text-xl font-bold mb-4">Agregar Nuevo Extra</h3>
+            <input
+              placeholder="Título"
+              className="w-full p-2 border rounded"
+              onChange={(e) => setNewExtra({ ...newExtra, title: e.target.value })}
+            />
+            <textarea
+              placeholder="Descripción"
+              className="w-full p-2 border rounded"
+              onChange={(e) => setNewExtra({ ...newExtra, description: e.target.value })}
+            />
+            <input
+              placeholder="Stat (opcional)"
+              className="w-full p-2 border rounded"
+              onChange={(e) => setNewExtra({ ...newExtra, stat: e.target.value })}
+            />
+            <button
+              onClick={handleAddExtra}
+              className="px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600"
+            >
+              Guardar Extra
+            </button>
+          </div>
+        </div>
+      )}
+      {/* Modal para agregar Estadística */}
+      {showStatModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-xl p-6 max-w-md w-full space-y-4">
             <h3 className="text-xl font-bold mb-4">Agregar Nueva Estadística</h3>
-            <div className="space-y-4">
-              <IconSelector
-                selected={newStat.icon}
-                onSelect={(icon) => setNewStat({ ...newStat, icon })}
-              />
-              <input
-                placeholder="Texto"
-                className="w-full p-2 border rounded"
-                value={newStat.text ?? ""}
-                onChange={(e) => setNewStat({ ...newStat, text: e.target.value })}
-              />
-            </div>
-            <div className="flex justify-end gap-2 mt-4">
-              <button
-                onClick={() => setShowAddStatModal(false)}
-                className="px-4 py-2 text-gray-500 hover:bg-gray-100 rounded"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleAddStat}
-                className="px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600"
-              >
-                Guardar
-              </button>
-            </div>
+            <IconSelector selected={newStat.icon_key} onSelect={(icon) => setNewStat({ ...newStat, icon_key: icon })} />
+            <input placeholder="Título" className="w-full p-2 border rounded" onChange={(e) => setNewStat({ ...newStat, title: e.target.value })} />
+            <textarea placeholder="Descripción" className="w-full p-2 border rounded" onChange={(e) => setNewStat({ ...newStat, description: e.target.value })} />
+            <input placeholder="Texto" className="w-full p-2 border rounded" onChange={(e) => setNewStat({ ...newStat, text: e.target.value })} />
+            <button onClick={handleAddStat} className="px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600">Guardar</button>
           </div>
         </div>
       )}

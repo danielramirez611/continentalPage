@@ -14,24 +14,23 @@ const App = () => {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<Login />} />
+        <Route path="/" element={<GridPage />} />
         <Route
-          path="/project"
+          path="/project/:id"
           element={
-            <PrivateRoute>
               <ProjectPage />
-            </PrivateRoute>
           }
         />
-         <Route
-          path="/grilla"
+        <Route
+          path="/login"
           element={
-            <PrivateRoute>
-              <GridPage />
-            </PrivateRoute>
+              <Login />
           }
         />
         <Route path="*" element={<Navigate to="/" />} />
+
+
+        
       </Routes>
     </Router>
   );

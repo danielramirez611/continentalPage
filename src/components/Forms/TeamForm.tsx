@@ -53,7 +53,7 @@ const TeamForm: React.FC<TeamFormProps> = ({ project, setProject }) => {
     <div className="space-y-8">
       {/* Lista de Miembros Existentes */}
       <AnimatePresence>
-        {project.team.map((member, index) => (
+      {project.team?.map((member, index) => (
           <motion.div
             key={index}
             initial={{ opacity: 0, y: 20 }}
@@ -249,7 +249,7 @@ const TeamForm: React.FC<TeamFormProps> = ({ project, setProject }) => {
           </button>
         </div>
       </motion.div>
-    </div>
+       </div>
   );
 };
 

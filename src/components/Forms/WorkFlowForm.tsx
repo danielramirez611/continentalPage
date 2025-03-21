@@ -13,6 +13,7 @@ const WorkflowForm = ({ project, setProject }: WorkflowFormProps) => {
   const [newStep, setNewStep] = useState<Partial<WorkflowStep>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageCount = project.workflow.filter(step => step.image).length;
+  const workflow = project.workflow || []; // ✅ Asegurar que `workflow` siempre sea un array
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

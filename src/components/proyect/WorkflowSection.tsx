@@ -22,7 +22,7 @@ const WorkflowSection = ({
 }: WorkflowSectionProps) => {
   const [isVisible, setIsVisible] = useState(false);
   const sectionRef = useRef<HTMLDivElement>(null);
-  const imageCount = workflow.filter(step => step.image).length;
+  const imageCount = (workflow || []).filter(step => step.image).length;
 
   useEffect(() => {
     const observer = new IntersectionObserver(

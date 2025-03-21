@@ -1,5 +1,5 @@
-// ProjectSlider.tsx
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import { ProjectCard } from "./ProjectCard";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -14,8 +14,8 @@ interface Project {
 interface ProjectSliderProps {
   title?: string;
   projects: Project[];
-  onDeleteProject?: (projectIndex: number) => void;
-  onEditProject?: (projectIndex: number, updatedProject: Project) => void;
+  onDeleteProject?: (projectId: string) => void;
+  onEditProject?: (project: Project) => void;
   isAdmin?: boolean;
 }
 
@@ -26,6 +26,12 @@ export const ProjectSlider: React.FC<ProjectSliderProps> = ({
   onEditProject,
   isAdmin,
 }) => {
+  const navigate = useNavigate();
+
+  const handleProjectClick = (project: Project) => {
+    navigate(`/project/${project.id}`, { state: { project } });
+  };
+
   return (
     <section className="py-10 px-4 md:px-8 lg:px-16">
       {title && (
@@ -42,43 +48,38 @@ export const ProjectSlider: React.FC<ProjectSliderProps> = ({
       {/* Grilla Responsive (tarjetas más grandes) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-8">
         <AnimatePresence>
-          {projects.map((project, index) => (
+          {projects.map((project) => (
             <motion.div
               key={project.id}
               initial={{ opacity: 0, y: 40 }}
               whileInView={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -40 }}
-              transition={{ duration: 0.5, delay: index * 0.1 }}
+              transition={{ duration: 0.5 }}
+              className="cursor-pointer"
+              onClick={() => handleProjectClick(project)} // 🔹 Redirige al hacer clic en la tarjeta
             >
               <ProjectCard
                 title={project.title}
                 category={project.category}
                 image={project.image}
-                onClick={() => {
-                  // Podrías redirigir a la página de detalle
-                  console.log("Ir al proyecto:", project.id);
-                }}
               />
-              {/* Botones de edición/ eliminación, sólo si admin */}
+
+              {/* 🔹 Botones de edición/eliminación, solo para admin */}
               {isAdmin && (
                 <div className="mt-2 flex gap-2 justify-end">
                   <button
-                    onClick={() => {
-                      if (onDeleteProject) onDeleteProject(index);
+                    onClick={(e) => {
+                      e.stopPropagation(); // ⛔ Evita la navegación al hacer clic en el botón
+                      if (onDeleteProject) onDeleteProject(project.id);
                     }}
                     className="px-3 py-1 bg-red-100 text-red-600 rounded hover:bg-red-200 text-sm"
                   >
                     Eliminar
                   </button>
                   <button
-                    onClick={() => {
-                      if (onEditProject) {
-                        const updatedProject = {
-                          ...project,
-                          title: project.title + " (Editado)",
-                        };
-                        onEditProject(index, updatedProject);
-                      }
+                    onClick={(e) => {
+                      e.stopPropagation(); // ⛔ Evita la navegación al hacer clic en el botón
+                      if (onEditProject) onEditProject(project);
                     }}
                     className="px-3 py-1 bg-gray-100 text-gray-800 rounded hover:bg-gray-200 text-sm"
                   >

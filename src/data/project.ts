@@ -1,7 +1,6 @@
-// data/project.ts
 import { FiSmile, FiStar, FiHeart, FiCode, FiCamera, FiZap, FiCloud, FiSun } from "react-icons/fi";
 
-// Mapa de íconos para referencia
+// 🔹 **Mapa de íconos para referencia**
 export const iconMap = {
   FiSmile,
   FiStar,
@@ -15,110 +14,133 @@ export const iconMap = {
 
 export type IconKey = keyof typeof iconMap;
 
+// 🔹 **Interfaz para Ventajas**
 export interface Advantage {
+  id?: number;
+  project_id: number;
+  section_title?: string;  // ✅ Nuevo campo: Título de la sección de ventajas
+  section_subtitle?: string; // ✅ Nuevo campo: Subtítulo de la sección de ventajas
   title: string;
   description: string;
-  icon: string; // URL o nombre de ícono
+  icon: string; // URL o nombre del ícono
+  stat: string; // Estadística
 }
 
-/**
- * Nueva versión de Feature para ajustarse a:
- *  - icon: string  (key del ícono, ej: "FiSmile")
- *  - stat: string  (porcentaje, cifras, etc.)
- *  - title: string
- *  - description: string
- *  - media?: string (URL de imagen o video adicional)
- */
+// 🔹 **Interfaz para Características**
 export interface Feature {
-  icon: string; // Clave del ícono (ej: "FiSmile")
-  stat: string;
+  id?: number;
+  project_id: number;
+  icon_key: string; // Clave del ícono (ej: "FiSmile")
   title: string;
-  description: string;
-  media?: string; // Opcional: URL de imagen o video
+  media?: string; // URL de imagen o video
+  media_type: "image" | "video"; // Tipo de media
 }
 
-/**
- * Íconos técnicos para la sección de características.
- * Pueden ser íconos (FontAwesome, React Icons) o imágenes.
- */
+// 🔹 **Interfaz para Íconos Técnicos**
 export interface TechnicalIcon {
+  id?: number;
+  project_id: number;
   icon: string; // Clave del ícono o URL de imagen
   text: string;
-  type: 'icon' | 'image'; // Tipo: ícono o imagen
+  type: "icon" | "image"; // Tipo: ícono o imagen
 }
 
-/**
- * Pasos del flujo de trabajo.
- */
+// 🔹 **Interfaz para Pasos del Flujo de Trabajo**
 export interface WorkflowStep {
+  id?: number;
+  project_id: number;
   step: number; // Número del paso (ej: 1, 2, 3)
-  title: string; // Título del paso (ej: "Diseño Conceptual")
-  description: string; // Descripción del paso
-  image?: string; // URL de la imagen (opcional)
+  title: string;
+  description: string;
+  image?: string; // URL de la imagen
 }
 
-/**
- * Miembros del equipo.
- */
+// 🔹 **Interfaz para Miembros del Equipo**
 export interface TeamMember {
+  id?: number;
+  project_id: number;
   name: string;
   role: string;
   bio: string;
   avatar: string; // URL del avatar
 }
 
-/**
- * Datos completos del proyecto.
- */
-
+// 🔹 **Interfaz para Estadísticas**
 export interface Stat {
-  icon: any; // Ícono de FontAwesome o React Icons
+  id?: number;
+  project_id: number;
+  icon: string; // Ícono representado como string
   text: string; // Texto de la estadística
 }
-export interface ProjectData {
-  // Nombre o título general del proyecto
-  projectName: string;
 
-  // Ventajas
+// 🔹 **Interfaz para Archivos Multimedia**
+export interface MediaFile {
+  id?: number;
+  project_id: number;
+  file_type: "image" | "video";
+  file_url: string; // URL del archivo en `media/`
+}
+
+// 🔹 **Interfaz Principal para el Proyecto**
+export interface ProjectData {
+  id?: number;
+  projectName: string;
+  projectDescription: string;
+  projectImage: string; // Nueva propiedad para la imagen del proyecto
+  category: string; // 🔹 Nueva propiedad para la categoría
+  section_id: string; // 🔹 Ahora cada proyecto está asociado a una sección específica
+
+  // Sección de Ventajas
   advantages: Advantage[];
   showAdvantages: boolean;
+  advantagesTitle?: string; // ✅ Nuevo campo para el título de la sección de ventajas
+  advantagesSubtitle?: string; // ✅ Nuevo campo para el subtítulo de la sección de ventajas
 
-  // Características / Features
+  // Sección de Características
   features: Feature[];
   technicalIcons: TechnicalIcon[];
   showFeatures: boolean;
   featuresTitle: string;
   featuresSubtitle: string;
-  featuresVideoUrl: string;
-  
-  // Estadísticas e íconos
-  stats: Stat[]; // Nueva propiedad
+  featuresMediaUrl: string; // 🔹 Se renombró para incluir imagen o video
+  featuresMediaType: "image" | "video"; // 🔹 Tipo de media: imagen o video
 
+  // Sección de Estadísticas
+  stats: Stat[];
 
-  // Flujo de trabajo
-  workflow: WorkflowStep[]; // Lista de pasos del flujo de trabajo
-  showWorkflow: boolean; // Mostrar/ocultar la sección
-  workflowTitle: string; // Título de la sección (ej: "Nuestro Proceso Creativo")
-  workflowSubtitle: string; // Subtítulo de la sección (ej: "De la idea a la realidad")
-  workflowTextLeft?: string;    // Nueva prop opcional
+  // Sección de Flujo de Trabajo
+  workflow: WorkflowStep[];
+  showWorkflow: boolean;
+  workflowTitle: string;
+  workflowSubtitle: string;
+  workflowTextLeft?: string;
   workflowTextRight?: string;
 
-  // Equipo
+  // Sección de Equipo
   team: TeamMember[];
   showTeam: boolean;
 
-  // Sección de contacto
+  // Sección de Contacto
   contactEmail: string;
   showContact: boolean;
+
+  // Archivos Multimedia
+  mediaFiles: MediaFile[];
 }
 
-// Datos iniciales vacíos
+// 🔹 **Datos Iniciales del Proyecto (Vacío)**
 export const initialProjectData: ProjectData = {
   projectName: "",
+  projectDescription: "",
+  category: "", // 🔹 Agregamos un campo inicial para la categoría
+  projectImage: "", // Inicialmente sin imagen
+  section_id: "", // 🔹 Se usa `section_id` en lugar de `category`
 
   // Ventajas
   advantages: [],
   showAdvantages: false,
+  advantagesTitle: "", // ✅ Inicializar con cadena vacía
+  advantagesSubtitle: "", // ✅ Inicializar con cadena vacía
 
   // Características
   features: [],
@@ -126,12 +148,14 @@ export const initialProjectData: ProjectData = {
   showFeatures: false,
   featuresTitle: "",
   featuresSubtitle: "",
-  featuresVideoUrl: "",
+  featuresMediaUrl: "", // ✅ Ahora permite imagen o video
+  featuresMediaType: "image", // ✅ Predeterminado a "image"
 
-  // Estadísticas e íconos
-  stats: [], // Inicializado como array vacío
 
-  // Flujo de trabajo
+  // Estadísticas
+  stats: [],
+
+  // Flujo de Trabajo
   workflow: [],
   showWorkflow: false,
   workflowTitle: "",
@@ -144,4 +168,7 @@ export const initialProjectData: ProjectData = {
   // Contacto
   contactEmail: "",
   showContact: false,
+
+  // Archivos Multimedia
+  mediaFiles: [],
 };
