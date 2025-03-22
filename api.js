@@ -496,3 +496,126 @@ export const uploadFile = async (file, token = null) => {
   }
 };
 
+////////////////////////////
+// 🔹 TEAM MEMBERS API Calls
+////////////////////////////
+
+// 🔹 Obtener todos los miembros del equipo de un proyecto
+export const getTeamMembers = async (projectId) => {
+  if (!projectId || isNaN(projectId)) throw new Error("ID de proyecto inválido");
+  return makeRequest("get", `/projects/${projectId}/team-members`);
+};
+
+// 🔹 Agregar nuevo miembro del equipo (con avatar)
+export const addTeamMember = async (member) => {
+  const formData = new FormData();
+  formData.append("name", member.name);
+  formData.append("role", member.role);
+  formData.append("bio", member.bio);
+  formData.append("project_id", member.project_id);
+
+  // 🔹 Convertir avatar (base64) en blob si es string
+  if (member.avatar?.startsWith("data:")) {
+    const blob = await (await fetch(member.avatar)).blob();
+    formData.append("avatar", blob, "avatar.png");
+  }
+
+  const response = await api.post(`/projects/${member.project_id}/team`, formData, {
+    
+  });
+
+  return response.data;
+};
+
+
+export const updateTeamMember = async (id, data) => {
+  const formData = new FormData();
+
+  if (data.name) formData.append("name", data.name);
+  if (data.role) formData.append("role", data.role);
+  if (data.bio) formData.append("bio", data.bio);
+
+  if (data.avatar) {
+    if (typeof data.avatar === "string" && data.avatar.startsWith("data:")) {
+      const blob = await (await fetch(data.avatar)).blob();
+      formData.append("avatar", blob, "avatar.png");
+    } else if (typeof data.avatar === "string" && data.avatar.startsWith("http")) {
+      formData.append("avatar", data.avatar);
+    } else {
+      formData.append("avatar", data.avatar);
+    }
+  }
+
+  const response = await api.put(`/team-members/${id}`, formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+
+  return response.data;
+};
+
+
+
+// 🔹 Eliminar miembro del equipo
+export const deleteTeamMember = async (memberId, token) => {
+  return makeRequest("delete", `/team-members/${memberId}`, {}, token);
+};
+
+export const getWorkflow = async (projectId) => {
+  return makeRequest('get', `/projects/${projectId}/workflow`);
+};
+
+export const saveOrUpdateWorkflow = async (projectId, data, token) => {
+  return makeRequest('post', `/projects/${projectId}/workflow`, data, token);
+};
+
+export const editWorkflow = async (projectId, data, token) => {
+  return makeRequest('put', `/projects/${projectId}/workflow`, data, token);
+};
+
+export const deleteWorkflow = async (projectId, token) => {
+  return makeRequest('delete', `/projects/${projectId}/workflow`, {}, token);
+};
+
+export const getWorkflowSteps = async (projectId) => {
+  return makeRequest('get', `/projects/${projectId}/workflow-steps`);
+};
+
+export const addWorkflowStep = async (projectId, stepData, imageFile, token) => {
+  const formData = new FormData();
+  formData.append('title', stepData.title);
+  formData.append('description', stepData.description);
+  formData.append('step_number', stepData.step_number);
+  if (imageFile) formData.append('image', imageFile);
+
+  const response = await api.post(`/projects/${projectId}/workflow-steps`, formData, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+
+  return response.data;
+};
+
+export const updateWorkflowStep = async (projectId, stepId, stepData, imageFile, token) => {
+  const formData = new FormData();
+  if (stepData.title) formData.append('title', stepData.title);
+  if (stepData.description) formData.append('description', stepData.description);
+  if (stepData.step_number) formData.append('step_number', stepData.step_number);
+  if (imageFile) formData.append('image', imageFile);
+
+  const response = await api.put(`/projects/${projectId}/workflow-steps/${stepId}`, formData, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+
+  return response.data;
+};
+
+export const deleteWorkflowStep = async (projectId, stepId, token) => {
+  return makeRequest('delete', `/projects/${projectId}/workflow-steps/${stepId}`, {}, token);
+};

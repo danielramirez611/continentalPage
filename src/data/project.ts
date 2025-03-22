@@ -16,7 +16,7 @@ export type IconKey = keyof typeof iconMap;
 
 // 🔹 **Interfaz para Ventajas**
 export interface Advantage {
-  id?: number;
+  id: number;
   project_id: number;
   section_title?: string;  // ✅ Nuevo campo: Título de la sección de ventajas
   section_subtitle?: string; // ✅ Nuevo campo: Subtítulo de la sección de ventajas

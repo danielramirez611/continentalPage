@@ -9,6 +9,12 @@ import {
   faTrophy,
   faStar,
   faChartBar,
+  faCompress,
+  faExpand,
+  faPause,
+  faPlay,
+  faVolumeMute,
+  faVolumeUp,
 } from "@fortawesome/free-solid-svg-icons";
 
 // Mapeo de iconos para las estadísticas
@@ -22,7 +28,7 @@ interface Feature {
   id: number;
   title: string;
   subtitle: string;
-  description: string;
+
   stat: string;
   media_type: string;
   media_url: string;
@@ -55,6 +61,9 @@ export const FeaturesSection = ({ projectId, onEdit, onDelete }: FeaturesSection
   const [extras, setExtras] = useState<Extra[]>([]);
   const [stats, setStats] = useState<Stat[]>([]);
   const [featuresVideoUrl, setFeaturesVideoUrl] = useState<string>("");
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   useEffect(() => {
     if (typeof projectId === "number" && !isNaN(projectId)) {
@@ -86,13 +95,44 @@ export const FeaturesSection = ({ projectId, onEdit, onDelete }: FeaturesSection
     }
   };
 
+  const togglePlayPause = () => {
+    if (videoRef.current) {
+      if (videoRef.current.paused) {
+        videoRef.current.play();
+        setIsPlaying(true);
+      } else {
+        videoRef.current.pause();
+        setIsPlaying(false);
+      }
+    }
+  };
+
+  const toggleMute = () => {
+    if (videoRef.current) {
+      videoRef.current.muted = !videoRef.current.muted;
+      setIsMuted(videoRef.current.muted);
+    }
+  };
+
+  const toggleFullscreen = () => {
+    if (videoRef.current) {
+      if (!isFullscreen) {
+        videoRef.current.requestFullscreen();
+        setIsFullscreen(true);
+      } else {
+        document.exitFullscreen();
+        setIsFullscreen(false);
+      }
+    }
+  };
+
   return (
     <section className="py-10 bg-white" id="caracteristicas">
       <div className="container mx-auto px-4">
         <div className="text-center">
-          <motion.h3 
+          <motion.h3
             className="text-4xl md:text-6xl font-bold text-gray-900 mb-4"
-            initial={{ opacity: 0, y: 50 }} 
+            initial={{ opacity: 0, y: 50 }}
             animate={{ opacity: 1, y: 0 }}
           >
             Características del Proyecto
@@ -104,9 +144,9 @@ export const FeaturesSection = ({ projectId, onEdit, onDelete }: FeaturesSection
             ❌ Error: No se pudo cargar la información del proyecto.
           </p>
         ) : (
-          <div className="grid lg:grid-cols-3 gap-12 items-start">
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
             {/* 🟢 SECCIÓN DE CARACTERÍSTICAS */}
-            <div className="lg:col-span-1 space-y-6">
+            <div className="space-y-8">
               <AnimatePresence>
                 {features.length === 0 ? (
                   <p className="text-gray-500 text-center">No hay características registradas.</p>
@@ -114,32 +154,41 @@ export const FeaturesSection = ({ projectId, onEdit, onDelete }: FeaturesSection
                   features.map((feature) => (
                     <motion.div
                       key={feature.id}
-                      className="p-6 bg-white border rounded-xl hover:shadow-md transition-all"
+                      className="group flex flex-col space-y-4 p-6 bg-white rounded-xl border border-gray-200 hover:border-blue-500 transition-all duration-300 cursor-pointer"
                       initial={{ opacity: 0, y: 50 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.8 }}
                     >
-                      {/* 🔹 Opciones para Admin */}
                       {user?.role === "admin" && (
                         <div className="absolute top-2 right-2 flex gap-2">
-                          <button onClick={() => onEdit(feature.id)} className="text-blue-600 hover:scale-110 transition-transform">
+                          <button
+                            onClick={() => onEdit(feature.id)}
+                            className="p-1 hover:text-blue-600"
+                          >
                             <FontAwesomeIcon icon={faEdit} />
                           </button>
-                          <button onClick={() => onDelete(feature.id)} className="text-red-600 hover:scale-110 transition-transform">
+                          <button
+                            onClick={() => onDelete(feature.id)}
+                            className="p-1 hover:text-red-600"
+                          >
                             <FontAwesomeIcon icon={faTrash} />
                           </button>
                         </div>
                       )}
 
-                      {/* 🔹 Título y Subtítulo */}
-                      <h4 className="text-xl font-bold text-gray-900">{feature.title}</h4>
-                      <p className="text-gray-700">{feature.subtitle}</p>
-
-                      {/* 🔹 Descripción */}
-                      <p className="text-gray-600">{feature.description}</p>
-
-                      {/* 🔹 Estado */}
-                      <span className="text-lg font-semibold text-purple-500">{feature.stat}</span>
+                      <div className="flex items-center space-x-4">
+                        <div className="bg-purple-50 p-3 rounded-lg group-hover:bg-purple-100 transition-colors">
+                          <span className="text-[var(--color-primario)] text-xl font-semibold">
+                            {feature.subtitle}
+                          </span>
+                        </div>
+                        <div>
+                          <h4 className="text-xl md:text-2xl font-semibold text-gray-900 mb-2">
+                            {feature.title}
+                          </h4>
+                      
+                        </div>
+                      </div>
                     </motion.div>
                   ))
                 )}
@@ -147,66 +196,85 @@ export const FeaturesSection = ({ projectId, onEdit, onDelete }: FeaturesSection
             </div>
 
             {/* 🟢 SECCIÓN DEL VIDEO */}
-            <div className="lg:col-span-1">
+            <motion.div
+              className="relative w-full max-w-4xl mt-24 mx-auto"
+              initial={{ opacity: 0, y: 50 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.4 }}
+            >
               {featuresVideoUrl ? (
-                <motion.div 
-                  className="relative w-full rounded-2xl overflow-hidden shadow-lg"
-                  initial={{ opacity: 0, y: 50 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.8 }}
-                >
-                  <video ref={videoRef} className="w-full h-auto object-cover rounded-lg" autoPlay muted loop playsInline src={featuresVideoUrl} />
-                </motion.div>
+                <div className="relative h-[420px] w-full rounded-2xl overflow-hidden shadow-lg group transform hover:scale-[0.98] transition-transform duration-500">
+                  <video
+                    ref={videoRef}
+                    className="w-full h-full object-cover"
+                    autoPlay
+                    muted
+                    loop
+                    playsInline
+                    src={featuresVideoUrl}
+                  >
+                    Tu navegador no soporta videos HTML5.
+                  </video>
+
+                  {/* Overlay y Controles Personalizados */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-gray-900/20 via-transparent to-transparent flex items-end p-6">
+                    <div className="w-full flex justify-between items-center">
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={togglePlayPause}
+                          className="bg-white/10 backdrop-blur-sm rounded-full p-3 hover:bg-white/20 transition-colors"
+                        >
+                          <FontAwesomeIcon
+                            icon={isPlaying ? faPause : faPlay}
+                            className="w-6 h-6 text-white"
+                          />
+                        </button>
+                        <button
+                          onClick={toggleMute}
+                          className="bg-white/10 backdrop-blur-sm rounded-full p-3 hover:bg-white/20 transition-colors"
+                        >
+                          <FontAwesomeIcon
+                            icon={isMuted ? faVolumeMute : faVolumeUp}
+                            className="w-6 h-6 text-white"
+                          />
+                        </button>
+                      </div>
+                      <button
+                        onClick={toggleFullscreen}
+                        className="bg-white/10 backdrop-blur-sm rounded-full p-3 hover:bg-white/20 transition-colors"
+                      >
+                        <FontAwesomeIcon
+                          icon={isFullscreen ? faCompress : faExpand}
+                          className="w-6 h-6 text-white"
+                        />
+                      </button>
+                    </div>
+                  </div>
+                </div>
               ) : (
                 <p className="text-gray-500 text-center">No hay videos disponibles.</p>
               )}
-            </div>
 
-            {/* 🟢 SECCIÓN DE EXTRAS Y ESTADÍSTICAS */}
-            <div className="lg:col-span-1 space-y-6">
-              {/* 🔹 Extras */}
-              <div className="p-6 bg-gray-100 border rounded-xl">
-                <h4 className="text-xl font-bold text-gray-900 mb-3">Extras</h4>
-                {extras.length === 0 ? (
-                  <p className="text-gray-500">No hay extras registrados.</p>
-                ) : (
-                  extras.map((extra) => (
-                    <div key={extra.id} className="p-2 border-b last:border-b-0">
-                      <h5 className="font-semibold">{extra.title}</h5>
-                      {extra.description && <p className="text-gray-700">{extra.description}</p>}
-                      {extra.stat && <span className="text-purple-500">{extra.stat}</span>}
+              {/* 🟢 SECCIÓN DE ESTADÍSTICAS */}
+              <div className="flex justify-center gap-8 mt-6">
+                {stats.map((stat) => (
+                  <div
+                    key={stat.id}
+                    className="text-center flex-1 flex flex-col items-center"
+                  >
+                    <div className="bg-gray-50 text-primario p-3 rounded-xl inline-block hover:bg-gray-100 transition-colors">
+                      <FontAwesomeIcon icon={iconMap[stat.icon_key] || faChartBar} className="text-3xl" />
                     </div>
-                  ))
-                )}
+                    <p className="text-gray-700 mt-2 text-lg flex-grow">
+                      {stat.text}
+                    </p>
+                  </div>
+                ))}
               </div>
-
-          {/* 🔹 Estadísticas */}
-<div className="p-6 bg-gray-100 border rounded-xl">
-  <h4 className="text-xl font-bold text-gray-900 mb-3">Estadísticas</h4>
-  {stats.length === 0 ? (
-    <p className="text-gray-500">No hay estadísticas registradas.</p>
-  ) : (
-    stats.map((stat) => (
-      <div key={stat.id} className="flex items-center space-x-4 p-3 border-b last:border-b-0">
-        {/* 🔹 Icono correctamente renderizado */}
-        <FontAwesomeIcon icon={iconMap[stat.icon_key] || faChartBar} className="text-3xl text-primary" />
-
-        {/* 🔹 Contenido textual alineado */}
-        <div>
-          <h5 className="font-semibold text-gray-900">{stat.title}</h5>
-          <p className="text-gray-700">{stat.text}</p>  
-        </div>
-      </div>
-    ))
-  )}
-</div>
-            </div>
+            </motion.div>
           </div>
         )}
       </div>
     </section>
   );
 };
-
-
-

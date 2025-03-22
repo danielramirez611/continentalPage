@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBars, faTimes } from "@fortawesome/free-solid-svg-icons";
 import { ProjectData } from "../data/project";
+import { useAuth } from "../context/AuthContext"; // Importa el contexto de autenticación
+import { Link } from "react-router-dom"; // Para redirigir al usuario al login
 
 interface NavbarProps {
   project: ProjectData; // Recibe el estado del proyecto
@@ -11,6 +13,7 @@ const Navbar = ({ project }: NavbarProps) => {
   const [scrolled, setScrolled] = useState(false);
   const [activeLink, setActiveLink] = useState("hero");
   const [menuOpen, setMenuOpen] = useState(false);
+  const { user, logout } = useAuth(); // Obtén el estado de autenticación
 
   // Función para desplazarse a una sección
   const handleScrollTo = (target: string) => {
@@ -104,6 +107,27 @@ const Navbar = ({ project }: NavbarProps) => {
               {link.name}
             </button>
           ))}
+
+          {/* Botón de Iniciar sesión o Cerrar sesión */}
+          {user ? (
+            <button
+              onClick={logout}
+              className={`text-3xl font-medium transition-colors duration-300 ${
+                scrolled ? "text-gray-800" : "text-white"
+              } hover:text-[#6802C1]`}
+            >
+              Cerrar sesión
+            </button>
+          ) : (
+            <Link
+              to="/login"
+              className={`text-3xl font-medium transition-colors duration-300 ${
+                scrolled ? "text-gray-800" : "text-white"
+              } hover:text-[#6802C1]`}
+            >
+              Iniciar sesión
+            </Link>
+          )}
         </nav>
 
         {/* Botón de menú hamburguesa en móviles */}
@@ -165,6 +189,23 @@ const Navbar = ({ project }: NavbarProps) => {
               {link.name}
             </button>
           ))}
+
+          {/* Botón de Iniciar sesión o Cerrar sesión en móvil */}
+          {user ? (
+            <button
+              onClick={logout}
+              className="text-3xl font-semibold text-gray-800 hover:text-[var(--color-primario)]"
+            >
+              Cerrar sesión
+            </button>
+          ) : (
+            <Link
+              to="/login"
+              className="text-3xl font-semibold text-gray-800 hover:text-[var(--color-primario)]"
+            >
+              Iniciar sesión
+            </Link>
+          )}
         </nav>
       </div>
     </header>

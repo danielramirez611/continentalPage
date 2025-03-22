@@ -4,6 +4,7 @@ import Login from './components/login/Login';
 import ProjectPage from './pages/ProyectPage';
 import { useAuth } from './context/AuthContext';
 import GridPage from './pages/GridPage';
+import ComponentePrueba from './components/ComponentePrueba';
 
 const PrivateRoute = ({ children }: { children: JSX.Element }) => {
   const { isAuthenticated } = useAuth();
@@ -25,6 +26,12 @@ const App = () => {
           path="/login"
           element={
               <Login />
+          }
+        />
+        <Route
+          path="/prueba"
+          element={
+              <ComponentePrueba />
           }
         />
         <Route path="*" element={<Navigate to="/" />} />

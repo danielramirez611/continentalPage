@@ -1,29 +1,48 @@
 import { useState, useEffect, useRef } from "react";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation, Pagination } from "swiper/modules";
-import "swiper/swiper-bundle.css"; // Importar el bundle de Swiper
+import { getWorkflow, getWorkflowSteps, addWorkflowStep, updateWorkflowStep, deleteWorkflowStep } from "../../../api";
+import "swiper/swiper-bundle.css";
 import styles from "../../WorkflowSection.module.css";
 
 interface WorkflowSectionProps {
-  workflow: {
-    step: number;
-    title: string;
-    description: string;
-    image?: string;
-  }[];
-  workflowTitle: string;
-  workflowSubtitle: string;
+  projectId: number;
 }
 
-const WorkflowSection = ({
-  workflow,
-  workflowTitle,
-  workflowSubtitle,
-}: WorkflowSectionProps) => {
+const WorkflowSection = ({ projectId }: WorkflowSectionProps) => {
+  const [workflow, setWorkflow] = useState([]);
+  const [workflowTitle, setWorkflowTitle] = useState("");
+  const [workflowSubtitle, setWorkflowSubtitle] = useState("");
   const [isVisible, setIsVisible] = useState(false);
   const sectionRef = useRef<HTMLDivElement>(null);
-  const imageCount = (workflow || []).filter(step => step.image).length;
 
+  // Función para cargar los datos del workflow desde la API
+  const fetchWorkflowData = async () => {
+    try {
+      const stepsResponse = await getWorkflowSteps(projectId);
+      const workflowResponse = await getWorkflow(projectId);
+
+      const formattedSteps = stepsResponse.map((step: any) => ({
+        step: step.step_number,
+        title: step.title,
+        description: step.description,
+        image: step.image_url ? `http://localhost:5000${step.image_url}` : null,
+      }));
+
+      setWorkflow(formattedSteps);
+      setWorkflowTitle(workflowResponse?.title || "");
+      setWorkflowSubtitle(workflowResponse?.subtitle || "");
+    } catch (error) {
+      console.error("Error al cargar workflow:", error);
+    }
+  };
+
+  // Cargar los datos al montar el componente
+  useEffect(() => {
+    fetchWorkflowData();
+  }, [projectId]);
+
+  // Observador para animaciones
   useEffect(() => {
     const observer = new IntersectionObserver(
       ([entry]) => setIsVisible(entry.isIntersecting),
@@ -32,6 +51,53 @@ const WorkflowSection = ({
     if (sectionRef.current) observer.observe(sectionRef.current);
     return () => observer.disconnect();
   }, []);
+
+  // Función para agregar un paso
+  const handleAddStep = async (newStep) => {
+    try {
+      // Agregar el paso a la API
+      const savedStep = await addWorkflowStep(projectId, newStep);
+
+      // Actualizar el estado local
+      setWorkflow((prevWorkflow) => [...prevWorkflow, savedStep]);
+    } catch (error) {
+      console.error("Error al agregar paso:", error);
+    }
+  };
+
+  // Función para editar un paso
+  const handleEditStep = async (stepId, updatedStep) => {
+    try {
+      // Actualizar el paso en la API
+      const updatedStepResponse = await updateWorkflowStep(projectId, stepId, updatedStep);
+
+      // Actualizar el estado local
+      setWorkflow((prevWorkflow) =>
+        prevWorkflow.map((step) =>
+          step.id === stepId ? updatedStepResponse : step
+        )
+      );
+    } catch (error) {
+      console.error("Error al editar paso:", error);
+    }
+  };
+
+  // Función para eliminar un paso
+  const handleDeleteStep = async (stepId) => {
+    try {
+      // Eliminar el paso de la API
+      await deleteWorkflowStep(projectId, stepId);
+
+      // Actualizar el estado local
+      setWorkflow((prevWorkflow) =>
+        prevWorkflow.filter((step) => step.id !== stepId)
+      );
+    } catch (error) {
+      console.error("Error al eliminar paso:", error);
+    }
+  };
+
+  const imageCount = workflow.filter((step) => step.image).length;
 
   const renderContent = () => {
     if (imageCount === 0) {
@@ -143,7 +209,6 @@ const WorkflowSection = ({
           ))}
         </Swiper>
 
-        {/* Flechas de Navegación Personalizadas */}
         <div className={`${styles.swiperButtonPrev}`}>
           <button className="p-3 bg-white rounded-full shadow-lg hover:bg-gray-100 transition-colors">
             &lt;
@@ -155,7 +220,6 @@ const WorkflowSection = ({
           </button>
         </div>
 
-        {/* Paginación */}
         <div className={`${styles.swiperPagination}`}></div>
       </>
     );
