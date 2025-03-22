@@ -90,9 +90,9 @@ export const FeaturesSection = ({ projectId, onEdit, onDelete }: FeaturesSection
     <section className="py-10 bg-white" id="caracteristicas">
       <div className="container mx-auto px-4">
         <div className="text-center">
-          <motion.h3 
+          <motion.h3
             className="text-4xl md:text-6xl font-bold text-gray-900 mb-4"
-            initial={{ opacity: 0, y: 50 }} 
+            initial={{ opacity: 0, y: 50 }}
             animate={{ opacity: 1, y: 0 }}
           >
             Características del Proyecto
@@ -149,7 +149,7 @@ export const FeaturesSection = ({ projectId, onEdit, onDelete }: FeaturesSection
             {/* 🟢 SECCIÓN DEL VIDEO */}
             <div className="lg:col-span-1">
               {featuresVideoUrl ? (
-                <motion.div 
+                <motion.div
                   className="relative w-full rounded-2xl overflow-hidden shadow-lg"
                   initial={{ opacity: 0, y: 50 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -180,26 +180,26 @@ export const FeaturesSection = ({ projectId, onEdit, onDelete }: FeaturesSection
                 )}
               </div>
 
-          {/* 🔹 Estadísticas */}
-<div className="p-6 bg-gray-100 border rounded-xl">
-  <h4 className="text-xl font-bold text-gray-900 mb-3">Estadísticas</h4>
-  {stats.length === 0 ? (
-    <p className="text-gray-500">No hay estadísticas registradas.</p>
-  ) : (
-    stats.map((stat) => (
-      <div key={stat.id} className="flex items-center space-x-4 p-3 border-b last:border-b-0">
-        {/* 🔹 Icono correctamente renderizado */}
-        <FontAwesomeIcon icon={iconMap[stat.icon_key] || faChartBar} className="text-3xl text-primary" />
+              {/* 🔹 Estadísticas */}
+              <div className="p-6 bg-gray-100 border rounded-xl">
+                <h4 className="text-xl font-bold text-gray-900 mb-3">Estadísticas</h4>
+                {stats.length === 0 ? (
+                  <p className="text-gray-500">No hay estadísticas registradas.</p>
+                ) : (
+                  stats.map((stat) => (
+                    <div key={stat.id} className="flex items-center space-x-4 p-3 border-b last:border-b-0">
+                      {/* 🔹 Icono correctamente renderizado */}
+                      <FontAwesomeIcon icon={iconMap[stat.icon_key] || faChartBar} className="text-3xl text-primary" />
 
-        {/* 🔹 Contenido textual alineado */}
-        <div>
-          <h5 className="font-semibold text-gray-900">{stat.title}</h5>
-          <p className="text-gray-700">{stat.text}</p>  
-        </div>
-      </div>
-    ))
-  )}
-</div>
+                      {/* 🔹 Contenido textual alineado */}
+                      <div>
+                        <h5 className="font-semibold text-gray-900">{stat.title}</h5>
+                        <p className="text-gray-700">{stat.text}</p>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
           </div>
         )}

@@ -29,7 +29,10 @@ const io = new Server(server, {
     },
 });
 
-app.use(express.json());
+app.use(express.json({ limit: '1000mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1000mb' }));
+
+
 app.use(cors());
 app.use('/media', express.static('media')); // Servir archivos multimedia
 
@@ -101,8 +104,14 @@ const storage = multer.diskStorage({
         cb(null, `${Date.now()}${ext}`);
     }
 });
-const upload = multer({ storage });
-
+const upload = multer({
+    storage,
+    limits: {
+      fileSize: 1000 * 1024 * 1024, // 1000 MB = 1 GB
+    },
+  });
+  
+  
 // 🔹 LOGIN
 
 // 🔹 **Ruta de Login**
@@ -1113,6 +1122,221 @@ app.delete('/api/extras/:id', async (req, res) => {
     }
 });
 
+
+// =======================================
+// RUTAS PARA "team_members"
+// =======================================
+// Rutas para miembros del equipo
+
+// Obtener todos los miembros de un proyecto
+app.get('/api/projects/:project_id/team-members', async (req, res) => {
+    try {
+      const { project_id } = req.params;
+      const [rows] = await db.execute('SELECT * FROM team_members WHERE project_id = ?', [project_id]);
+      res.json(rows);
+    } catch (error) {
+      console.error('❌ Error al obtener miembros del equipo:', error);
+      res.status(500).json({ message: 'Error al obtener miembros del equipo', error });
+    }
+  });
+  
+  // Subir avatar
+  app.post('/api/team-members/upload-avatar', upload.single('avatar'), async (req, res) => {
+    if (!req.file) return res.status(400).json({ message: 'Archivo no recibido' });
+    const avatarUrl = `/media/images/${req.file.filename}`;
+    res.json({ message: 'Avatar subido correctamente', avatarUrl });
+  });
+  
+  // Crear nuevo miembro
+  app.post('/api/projects/:project_id/team', upload.single('avatar'), async (req, res) => {
+    const { project_id } = req.params;
+    const { name, role, bio } = req.body;
+    const avatarPath = req.file ? `/media/images/${req.file.filename}` : null;
+  
+    if (!name || !role || !bio || !avatarPath) {
+      return res.status(400).json({ message: "Todos los campos son requeridos." });
+    }
+  
+    const [result] = await db.execute(
+      `INSERT INTO team_members (project_id, name, role, bio, avatar) VALUES (?, ?, ?, ?, ?)`,
+      [project_id, name, role, bio, avatarPath]
+    );
+  
+    res.status(201).json({
+      id: result.insertId,
+      project_id,
+      name,
+      role,
+      bio,
+      avatar: avatarPath,
+    });
+  });
+  
+  // Actualizar miembro
+ app.put("/api/team-members/:id", upload.single("avatar"), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, role, bio } = req.body;
+    const avatarFile = req.file;
+
+    const updates = [];
+    const values = [];
+
+    if (name) {
+      updates.push("name = ?");
+      values.push(name);
+    }
+    if (role) {
+      updates.push("role = ?");
+      values.push(role);
+    }
+    if (bio) {
+      updates.push("bio = ?");
+      values.push(bio);
+    }
+    if (avatarFile) {
+        const avatarPath = `/media/images/${avatarFile.filename}`;
+        updates.push("avatar = ?");
+        values.push(avatarPath);
+      } else if (req.body.avatar) {
+        // 🟢 Siempre guardar como está (la URL completa)
+        updates.push("avatar = ?");
+        values.push(req.body.avatar);
+      }
+      
+
+    if (updates.length === 0) {
+      return res.status(400).json({ message: "No hay datos para actualizar" });
+    }
+
+    values.push(id);
+    await db.execute(`UPDATE team_members SET ${updates.join(", ")} WHERE id = ?`, values);
+
+    res.json({ message: "Miembro actualizado con éxito" });
+  } catch (error) {
+    console.error("❌ Error al actualizar miembro:", error);
+    res.status(500).json({ message: "Error al actualizar miembro", error });
+  }
+});
+  // Eliminar miembro
+  app.delete('/api/team-members/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      await db.execute('DELETE FROM team_members WHERE id = ?', [id]);
+      res.json({ message: 'Miembro eliminado con éxito' });
+    } catch (error) {
+      console.error('❌ Error al eliminar miembro:', error);
+      res.status(500).json({ message: 'Error al eliminar miembro', error });
+    }
+  });
+  // 📦 WORKFLOW: Título y Subtítulo
+app.get('/api/projects/:project_id/workflow', async (req, res) => {
+    const { project_id } = req.params;
+    try {
+        const [rows] = await db.execute('SELECT * FROM workflow WHERE project_id = ?', [project_id]);
+        if (rows.length === 0) return res.status(404).json({ message: 'Workflow no encontrado' });
+        res.json(rows[0]);
+    } catch (error) {
+        res.status(500).json({ message: 'Error al obtener el workflow', error });
+    }
+});
+
+app.post('/api/projects/:project_id/workflow', async (req, res) => {
+    const { project_id } = req.params;
+    const { title, subtitle } = req.body;
+    try {
+        const [existing] = await db.execute('SELECT id FROM workflow WHERE project_id = ?', [project_id]);
+        if (existing.length > 0) {
+            await db.execute('UPDATE workflow SET title = ?, subtitle = ? WHERE project_id = ?', [title, subtitle, project_id]);
+        } else {
+            await db.execute('INSERT INTO workflow (project_id, title, subtitle) VALUES (?, ?, ?)', [project_id, title, subtitle]);
+        }
+        res.json({ message: 'Workflow guardado con éxito' });
+    } catch (error) {
+        res.status(500).json({ message: 'Error al guardar el workflow', error });
+    }
+});
+
+app.put('/api/projects/:project_id/workflow', async (req, res) => {
+    const { project_id } = req.params;
+    const { title, subtitle } = req.body;
+    try {
+        await db.execute('UPDATE workflow SET title = ?, subtitle = ? WHERE project_id = ?', [title, subtitle, project_id]);
+        res.json({ message: 'Workflow actualizado con éxito' });
+    } catch (error) {
+        res.status(500).json({ message: 'Error al actualizar el workflow', error });
+    }
+});
+
+app.delete('/api/projects/:project_id/workflow', async (req, res) => {
+    const { project_id } = req.params;
+    try {
+        await db.execute('DELETE FROM workflow WHERE project_id = ?', [project_id]);
+        res.json({ message: 'Workflow eliminado con éxito' });
+    } catch (error) {
+        res.status(500).json({ message: 'Error al eliminar el workflow', error });
+    }
+});
+
+// 📦 WORKFLOW STEPS
+app.get('/api/projects/:project_id/workflow-steps', async (req, res) => {
+    const { project_id } = req.params;
+    try {
+        const [steps] = await db.execute('SELECT * FROM workflow_steps WHERE project_id = ? ORDER BY step_number ASC', [project_id]);
+        res.json(steps);
+    } catch (error) {
+        res.status(500).json({ message: 'Error al obtener los pasos del workflow', error });
+    }
+});
+
+app.post('/api/projects/:project_id/workflow-steps', upload.single('image'), async (req, res) => {
+    const { project_id } = req.params;
+    const { title, description, step_number } = req.body;
+    const image_url = req.file ? `/media/images/${req.file.filename}` : null;
+    try {
+        await db.execute(
+            'INSERT INTO workflow_steps (project_id, step_number, title, description, image_url) VALUES (?, ?, ?, ?, ?)',
+            [project_id, step_number, title, description, image_url]
+        );
+        res.status(201).json({ message: 'Paso agregado con éxito' });
+    } catch (error) {
+        res.status(500).json({ message: 'Error al agregar paso', error });
+    }
+});
+
+app.put('/api/projects/:project_id/workflow-steps/:id', upload.single('image'), async (req, res) => {
+    const { project_id, id } = req.params;
+    const { title, description, step_number } = req.body;
+    const image_url = req.file ? `/media/images/${req.file.filename}` : null;
+    const updates = [];
+    const values = [];
+
+    if (title) { updates.push('title = ?'); values.push(title); }
+    if (description) { updates.push('description = ?'); values.push(description); }
+    if (step_number) { updates.push('step_number = ?'); values.push(step_number); }
+    if (image_url) { updates.push('image_url = ?'); values.push(image_url); }
+
+    if (updates.length === 0) return res.status(400).json({ message: 'No hay datos para actualizar' });
+
+    values.push(id, project_id);
+    try {
+        await db.execute(`UPDATE workflow_steps SET ${updates.join(', ')} WHERE id = ? AND project_id = ?`, values);
+        res.json({ message: 'Paso actualizado con éxito' });
+    } catch (error) {
+        res.status(500).json({ message: 'Error al actualizar paso', error });
+    }
+});
+
+app.delete('/api/projects/:project_id/workflow-steps/:id', async (req, res) => {
+    const { id, project_id } = req.params;
+    try {
+        await db.execute('DELETE FROM workflow_steps WHERE id = ? AND project_id = ?', [id, project_id]);
+        res.json({ message: 'Paso eliminado con éxito' });
+    } catch (error) {
+        res.status(500).json({ message: 'Error al eliminar paso', error });
+    }
+});
+
 // 🔹 **CRUD Genérico para Tablas (excepto `users`)**
 const tables = [
     'projects',
@@ -1121,7 +1345,7 @@ const tables = [
     'technical_icons',
     'workflow_steps',
     'team_members',
-    'stats',
+    'stats', 
     'media_files',
     'contact_info'
 ];

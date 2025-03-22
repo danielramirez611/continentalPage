@@ -153,25 +153,28 @@ const ProjectPage = () => {
         {/* Sección de Flujo de Trabajo */}
         {project.showWorkflow && (
           <WorkflowSection
-            workflow={project.workflow}
-            workflowTitle={project.workflowTitle}
-            workflowSubtitle={project.workflowSubtitle}
-            onEdit={() => setShowForm(true)}
-            onDelete={handleDeleteWorkflowStep}
-          />
+          projectId={project.id}
+          workflow={project.workflow}
+          workflowTitle={project.workflowTitle}
+          workflowSubtitle={project.workflowSubtitle}
+          onEdit={() => setShowForm(true)}
+          onDelete={handleDeleteWorkflowStep}
+        />
+        
         )}
 
-        {/* Sección de Equipo */}
-        {project.showTeam && (
-          <TeamSection
-            team={project.team || []}
-            onEdit={() => setShowForm(true)}
-            onDelete={(index) => {
-              const newTeam = (project.team || []).filter((_, i) => i !== index);
-              setProject({ ...project, team: newTeam });
-            }}
-          />
-        )}
+       {/* Sección de Equipo */}
+{project.showTeam && (
+  <TeamSection
+    project={project}
+    setProject={setProject}
+    onEdit={() => setShowForm(true)}
+    onDelete={(index) => {
+      const newTeam = (project.team || []).filter((_, i) => i !== index);
+      setProject({ ...project, team: newTeam });
+    }}
+  />
+)}
 
         {/* Sección de Contacto */}
         {project.showContact && <ContactForm email={project.contactEmail} />}

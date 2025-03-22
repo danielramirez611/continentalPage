@@ -1,28 +1,20 @@
 import { useState, useEffect, useRef } from "react";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation, Pagination } from "swiper/modules";
-import "swiper/swiper-bundle.css"; // Importar el bundle de Swiper
+import { getWorkflow, getWorkflowSteps } from "../../../api";
+import "swiper/swiper-bundle.css";
 import styles from "../../WorkflowSection.module.css";
 
 interface WorkflowSectionProps {
-  workflow: {
-    step: number;
-    title: string;
-    description: string;
-    image?: string;
-  }[];
-  workflowTitle: string;
-  workflowSubtitle: string;
+  projectId: number;
 }
 
-const WorkflowSection = ({
-  workflow,
-  workflowTitle,
-  workflowSubtitle,
-}: WorkflowSectionProps) => {
+const WorkflowSection = ({ projectId }: WorkflowSectionProps) => {
+  const [workflow, setWorkflow] = useState([]);
+  const [workflowTitle, setWorkflowTitle] = useState("");
+  const [workflowSubtitle, setWorkflowSubtitle] = useState("");
   const [isVisible, setIsVisible] = useState(false);
   const sectionRef = useRef<HTMLDivElement>(null);
-  const imageCount = (workflow || []).filter(step => step.image).length;
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -32,6 +24,32 @@ const WorkflowSection = ({
     if (sectionRef.current) observer.observe(sectionRef.current);
     return () => observer.disconnect();
   }, []);
+
+  useEffect(() => {
+    const fetchWorkflowData = async () => {
+      try {
+        const stepsResponse = await getWorkflowSteps(projectId);
+        const workflowResponse = await getWorkflow(projectId);
+
+        const formattedSteps = stepsResponse.map((step: any) => ({
+          step: step.step_number,
+          title: step.title,
+          description: step.description,
+          image: step.image_url ? `http://localhost:5000${step.image_url}` : null,
+        }));
+
+        setWorkflow(formattedSteps);
+        setWorkflowTitle(workflowResponse?.title || "");
+        setWorkflowSubtitle(workflowResponse?.subtitle || "");
+      } catch (error) {
+        console.error("Error al cargar workflow:", error);
+      }
+    };
+
+    fetchWorkflowData();
+  }, [projectId]);
+
+  const imageCount = workflow.filter(step => step.image).length;
 
   const renderContent = () => {
     if (imageCount === 0) {
@@ -143,7 +161,6 @@ const WorkflowSection = ({
           ))}
         </Swiper>
 
-        {/* Flechas de Navegación Personalizadas */}
         <div className={`${styles.swiperButtonPrev}`}>
           <button className="p-3 bg-white rounded-full shadow-lg hover:bg-gray-100 transition-colors">
             &lt;
@@ -155,7 +172,6 @@ const WorkflowSection = ({
           </button>
         </div>
 
-        {/* Paginación */}
         <div className={`${styles.swiperPagination}`}></div>
       </>
     );
